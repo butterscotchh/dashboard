@@ -6,7 +6,7 @@ import {
   Calendar,
   DollarSign,
   Wallet,
-  PiggyBank,
+  Coins,
   CreditCard,
   Landmark,
   AlertCircle,
@@ -595,7 +595,7 @@ const InputDPK = ({ onError }) => {
 
   const renderInputTab = () => {
     const categories = [
-      { field: 'Tabungan', label: 'Tabungan', icon: <PiggyBank className="w-5 h-5" /> },
+      { field: 'Tabungan', label: 'Tabungan', icon: <Coins className="w-5 h-5" /> },
       { field: 'Giro', label: 'Giro', icon: <CreditCard className="w-5 h-5" /> },
       { field: 'Deposito', label: 'Deposito', icon: <Landmark className="w-5 h-5" /> }
     ];
@@ -740,7 +740,7 @@ const InputDPK = ({ onError }) => {
 
   const renderGrowthTargetsTab = () => {
     const categories = [
-      { field: 'Tabungan', label: 'Target Tabungan', icon: <PiggyBank className="w-5 h-5" /> },
+      { field: 'Tabungan', label: 'Target Tabungan', icon: <Coins className="w-5 h-5" /> },
       { field: 'Giro', label: 'Target Giro', icon: <CreditCard className="w-5 h-5" /> },
       { field: 'Deposito', label: 'Target Deposito', icon: <Landmark className="w-5 h-5" /> }
     ];
@@ -979,7 +979,7 @@ const InputDPK = ({ onError }) => {
           
           {/* Info tentang periode */}
           <div className="mt-4 text-sm text-gray-600">
-            <h3 className="text-sm font-medium text-blue-900 mb-2">Input Target Pada Data Yang Paling Baru Saja</h3>
+            <h3 className="text-sm font-medium text-blue-900 mb-2">Jika terdapat 2 tabel yang sama bedakan di tanggalnya agar tidak terjadi bug</h3>
           </div>
         </div>
 

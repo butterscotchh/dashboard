@@ -4,7 +4,7 @@ import authService from '../services/auth';
 import { 
   DollarSign, 
   Wallet, 
-  PiggyBank, 
+  Coins, 
   CreditCard, 
   Landmark,
   TrendingUp, 
@@ -277,7 +277,7 @@ const DashboardDPK = ({ user, dashboardData }) => {
             {
                 name: 'Tabungan',
                 value: formatToBillionWithUnit(latestData.tabungan),
-                icon: <PiggyBank className="w-6 h-6" />,
+                icon: <Coins className="w-6 h-6" />,
                 mtd: formatToBillionWithUnit(mtdData.tabungan),
                 ytd: formatToBillionWithUnit(ytdData.tabungan),
                 achievement: '100%',
@@ -563,7 +563,7 @@ const DashboardDPK = ({ user, dashboardData }) => {
                                                     value: tabungan, 
                                                     percent: (tabungan / dpk) * 100,
                                                     color: 'bg-violet-500',
-                                                    icon: <PiggyBank className="w-3 h-3" />
+                                                    icon: <Coins className="w-3 h-3" />
                                                 },
                                                 { 
                                                     name: 'Giro', 
