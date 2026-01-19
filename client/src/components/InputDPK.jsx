@@ -758,7 +758,7 @@ const InputDPK = ({ onError }) => {
             <div>
               <p className="text-sm font-medium text-blue-800">Informasi Target</p>
               <p className="text-xs text-blue-700 mt-1">
-                Input target growth pada data yang paling baru saja.
+                Input Growth Target pada data yang paling baru saja.
               </p>
             </div>
           </div>
@@ -905,7 +905,7 @@ const InputDPK = ({ onError }) => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center">
               <Calendar className="w-6 h-6 mr-3 text-emerald-500" />
-              <h2 className="text-xl font-semibold text-gray-900">Pilih Periode</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Pilih Periode DPK</h2>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
@@ -979,7 +979,7 @@ const InputDPK = ({ onError }) => {
           
           {/* Info tentang periode */}
           <div className="mt-4 text-sm text-gray-600">
-            <h3 className="text-sm font-medium text-blue-900 mb-2">Jika terdapat 2 tabel yang sama bedakan di tanggalnya agar tidak terjadi bug</h3>
+            <h3 className="text-sm font-medium text-blue-900 mb-2">Jika terdapat 2 tabel yang sama periode bulan dan tahunnya, bedakan di tanggalnya agar tidak terjadi bug.</h3>
           </div>
         </div>
 
@@ -1065,85 +1065,6 @@ const InputDPK = ({ onError }) => {
           </form>
         </div>
       </motion.div>
-
-      {/* Info Box - Langkah Input */}
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ delay: 0.3 }}
-  className="bg-blue-50 border border-blue-200 rounded-2xl p-6"
->
-  <div className="flex items-start">
-    <Info className="w-6 h-6 text-blue-600 mt-1 mr-3 flex-shrink-0" />
-    <div>
-      <h3 className="text-sm font-medium text-blue-900 mb-4">📋 Cara Input Data DPK:</h3>
-      
-      <div className="space-y-3">
-        {/* Langkah 1 */}
-        <div className="flex items-start">
-          <div className="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
-            1
-          </div>
-          <div>
-            <h4 className="text-xs font-medium text-blue-800">Pilih Periode</h4>
-            <p className="text-xs text-blue-700 mt-0.5">
-              Pilih periode yang sudah ada atau buat custom periode baru
-            </p>
-          </div>
-        </div>
-        
-        {/* Langkah 2 */}
-        <div className="flex items-start">
-          <div className="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
-            2
-          </div>
-          <div>
-            <h4 className="text-xs font-medium text-blue-800">Input Data Aktual</h4>
-            <p className="text-xs text-blue-700 mt-0.5">
-              Isi Tabungan, Giro, Deposito → DPK & CASA otomatis terhitung
-            </p>
-          </div>
-        </div>
-        
-        {/* Langkah 3 */}
-        <div className="flex items-start">
-          <div className="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
-            3
-          </div>
-          <div>
-            <h4 className="text-xs font-medium text-blue-800">Input Target (Opsional)</h4>
-            <p className="text-xs text-blue-700 mt-0.5">
-              Isi target per komponen → Target DPK & CASA otomatis terhitung
-            </p>
-          </div>
-        </div>
-        
-        {/* Langkah 4 */}
-        <div className="flex items-start">
-          <div className="bg-blue-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
-            4
-          </div>
-          <div>
-            <h4 className="text-xs font-medium text-blue-800">Simpan Data</h4>
-            <p className="text-xs text-blue-700 mt-0.5">
-              Klik "Simpan Data" untuk menyimpan dan melihat di dashboard
-            </p>
-          </div>
-        </div>
-        
-        {/* Tips */}
-        <div className="mt-4 pt-3 border-t border-blue-200">
-          <h4 className="text-xs font-medium text-blue-800 mb-1">💡 Penting:</h4>
-          <ul className="text-xs text-blue-700 space-y-0.5">
-            <li>• Gunakan angka tanpa titik/koma (Contoh: 350000 untuk Rp 350 Juta)</li>
-            <li>• Target hanya perlu diinput untuk data terbaru</li>
-            <li>• Untuk edit, pilih periode yang sudah ada lalu update</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
-</motion.div>
     </>
   );
 };
