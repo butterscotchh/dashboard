@@ -7,15 +7,20 @@ import {
   Building,
   AlertCircle,
   RefreshCw,
-  PlusCircle
+  PlusCircle,
+  Banknote,
+  TrendingUp,
+  BarChart2
 } from 'lucide-react';
 import DashboardDPK from '../components/DashboardDPK';
+import DashboardPBY from '../components/DashboardPBY';
 
 const Dashboard = () => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [dashboardData, setDashboardData] = useState(null);
     const [error, setError] = useState('');
+    const [activeTab, setActiveTab] = useState('dpk'); // 'dpk' atau 'pby'
     const navigate = useNavigate();
 
     // Load data saat komponen mount
@@ -88,7 +93,7 @@ const Dashboard = () => {
                             </div>
                             <div>
                                 <h1 className="text-2xl font-bold text-emerald-800">
-                                    Dashboard
+                                    Dashboard {activeTab === 'dpk' ? 'DPK' : 'PBY'}
                                 </h1>
                                 <p className="text-sm text-emerald-600">
                                     {dashboardData?.branch_info?.name || 'KCP Jakarta Tempo Pavillion 2'}
@@ -181,8 +186,130 @@ const Dashboard = () => {
                     </div>
                 </motion.div>
 
-                {/* Dashboard DPK Component */}
-                <DashboardDPK user={user} dashboardData={dashboardData} />
+                {/* Tab Navigation untuk DPK/PBY */}
+<motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.1 }}
+    className="mb-8"
+>
+    <div className="flex flex-col md:flex-row gap-4">
+        {/* DPK Card */}
+        <div 
+            className={`flex-1 cursor-pointer transition-all duration-300 ${
+                activeTab === 'dpk' 
+                    ? 'border-2 border-emerald-500 shadow-lg' 
+                    : 'border border-gray-200 hover:border-emerald-300 hover:shadow-md'
+            } bg-white rounded-2xl overflow-hidden`}
+            onClick={() => setActiveTab('dpk')}
+        >
+            <div className="p-6">
+                <div className="flex items-center mb-4">
+                    <div className={`p-3 rounded-lg mr-4 ${
+                        activeTab === 'dpk' ? 'bg-emerald-100' : 'bg-gray-100'
+                    }`}>
+                        <Banknote className={`w-6 h-6 ${
+                            activeTab === 'dpk' ? 'text-emerald-600' : 'text-gray-600'
+                        }`} />
+                    </div>
+                    <div>
+                        <h3 className={`text-xl font-bold ${
+                            activeTab === 'dpk' ? 'text-emerald-700' : 'text-gray-900'
+                        }`}>
+                            Dashboard DPK
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">Dana Pihak Ketiga</p>
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Tabungan, Giro, Deposito</span>
+                        <span className={`font-medium ${
+                            activeTab === 'dpk' ? 'text-emerald-600' : 'text-gray-600'
+                        }`}>
+                            5 Items
+                        </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                        {activeTab === 'dpk' && (
+                            <span className="px-2 py-1 bg-emerald-500 text-white text-xs rounded-lg">
+                                Aktif
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* PBY Card */}
+        <div 
+            className={`flex-1 cursor-pointer transition-all duration-300 ${
+                activeTab === 'pby' 
+                    ? 'border-2 border-blue-500 shadow-lg' 
+                    : 'border border-gray-200 hover:border-blue-300 hover:shadow-md'
+            } bg-white rounded-2xl overflow-hidden`}
+            onClick={() => setActiveTab('pby')}
+        >
+            <div className="p-6">
+                <div className="flex items-center mb-4">
+                    <div className={`p-3 rounded-lg mr-4 ${
+                        activeTab === 'pby' ? 'bg-blue-100' : 'bg-gray-100'
+                    }`}>
+                        <TrendingUp className={`w-6 h-6 ${
+                            activeTab === 'pby' ? 'text-blue-600' : 'text-gray-600'
+                        }`} />
+                    </div>
+                    <div>
+                        <h3 className={`text-xl font-bold ${
+                            activeTab === 'pby' ? 'text-blue-700' : 'text-gray-900'
+                        }`}>
+                            Dashboard PBY
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">Pembiayaan</p>
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Griya, Oto, Mitraguna, Pensiun</span>
+                        <span className={`font-medium ${
+                            activeTab === 'pby' ? 'text-blue-600' : 'text-gray-600'
+                        }`}>
+                            8 Items
+                        </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                        {activeTab === 'pby' && (
+                            <span className="px-2 py-1 bg-blue-500 text-white text-xs rounded-lg">
+                                Aktif
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</motion.div>
+
+                {/* Dashboard Component berdasarkan Tab */}
+                {activeTab === 'dpk' ? (
+                    <motion.div
+                        key="dpk"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <DashboardDPK user={user} dashboardData={dashboardData} />
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="pby"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <DashboardPBY user={user} dashboardData={dashboardData} />
+                    </motion.div>
+                )}
 
             </main>
 

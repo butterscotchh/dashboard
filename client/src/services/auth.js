@@ -129,7 +129,7 @@ const authService = {
     // Get specific period DPK data
     async getDPKPeriodData(period) {
         try {
-            const response = await api.get(`/dpk/${period}`);
+            const response = await api.get(`/dpk/${encodeURIComponent(period)}`);
             return response.data;
         } catch (error) {
             console.error('Get DPK period data error:', error);
@@ -157,7 +157,7 @@ const authService = {
     // Delete DPK data
     async deleteDPKData(period) {
         try {
-            const response = await api.delete(`/dpk/${period}`);
+            const response = await api.delete(`/dpk/${encodeURIComponent(period)}`);
             return response.data;
         } catch (error) {
             console.error('Delete DPK data error:', error);
@@ -167,6 +167,66 @@ const authService = {
             };
         }
     },
+    
+    // ============ PBY DATA ENDPOINTS ============
+    
+    // Get all PBY data
+    async getPBYData() {
+        try {
+            const response = await api.get('/pby');
+            return response.data;
+        } catch (error) {
+            console.error('Get PBY data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to get PBY data'
+            };
+        }
+    },
+    
+    // Get specific period PBY data
+    async getPBYPeriodData(period) {
+        try {
+            const response = await api.get(`/pby/${encodeURIComponent(period)}`);
+            return response.data;
+        } catch (error) {
+            console.error('Get PBY period data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to get PBY period data'
+            };
+        }
+    },
+    
+    // Save/update PBY data
+    async savePBYData(data) {
+        try {
+            const response = await api.post('/pby', data);
+            return response.data;
+        } catch (error) {
+            console.error('Save PBY data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to save PBY data'
+            };
+        }
+    },
+    
+    // Delete PBY data
+    async deletePBYData(period) {
+        try {
+            const response = await api.delete(`/pby/${encodeURIComponent(period)}`);
+            return response.data;
+        } catch (error) {
+            console.error('Delete PBY data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to delete PBY data'
+            };
+        }
+    },
+    
+    // ============ DASHBOARD ============
     
     // Get dashboard data
     async getDashboardData() {
@@ -277,6 +337,4 @@ const authService = {
     }
 };
 
-// Export api instance juga jika diperlukan
-export { api };
 export default authService;
