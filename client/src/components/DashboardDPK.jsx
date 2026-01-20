@@ -136,6 +136,11 @@ const DashboardDPK = ({ user, dashboardData }) => {
             historical: historicalData,
             targets: targetData
         });
+
+        // Set selected period to latest if not set
+        if (historicalData.length > 0 && !selectedPeriod) {
+            setSelectedPeriod(historicalData[historicalData.length - 1].period);
+        }
     };
 
     // Hitung MTD
@@ -341,12 +346,13 @@ else if (inBillion >= 10) {
     return [
         {
             name: 'DPK',
-            value: formatForPerformanceCard(latestData.dpk), // SAMA semua
+            value: formatForPerformanceCard(latestData.dpk),
             icon: <DollarSign className="w-6 h-6" />,
-            mtd: formatForPerformanceCard(mtdData.dpk), // SAMA semua
-            ytd: formatForPerformanceCard(ytdData.dpk), // SAMA semua
+            mtd: formatForPerformanceCard(mtdData.dpk),
+            ytd: formatForPerformanceCard(ytdData.dpk),
             achievement: '100%',
-            trend: mtdData.dpk >= 0 ? 'up' : 'down',
+            mtdTrend: mtdData.dpk >= 0 ? 'up' : 'down',  // <-- Trend MTD
+            ytdTrend: ytdData.dpk >= 0 ? 'up' : 'down',  // <-- Trend YTD
             color: 'from-blue-500 to-blue-600'
         },
         {
@@ -356,7 +362,8 @@ else if (inBillion >= 10) {
             mtd: formatForPerformanceCard(mtdData.casa),
             ytd: formatForPerformanceCard(ytdData.casa),
             achievement: '100%',
-            trend: mtdData.casa >= 0 ? 'up' : 'down',
+            mtdTrend: mtdData.casa >= 0 ? 'up' : 'down',
+            ytdTrend: ytdData.casa >= 0 ? 'up' : 'down',
             color: 'from-emerald-500 to-emerald-600'
         },
         {
@@ -366,7 +373,8 @@ else if (inBillion >= 10) {
             mtd: formatForPerformanceCard(mtdData.tabungan),
             ytd: formatForPerformanceCard(ytdData.tabungan),
             achievement: '100%',
-            trend: mtdData.tabungan >= 0 ? 'up' : 'down',
+            mtdTrend: mtdData.tabungan >= 0 ? 'up' : 'down',
+            ytdTrend: ytdData.tabungan >= 0 ? 'up' : 'down',
             color: 'from-violet-500 to-violet-600'
         },
         {
@@ -376,7 +384,8 @@ else if (inBillion >= 10) {
             mtd: formatForPerformanceCard(mtdData.giro),
             ytd: formatForPerformanceCard(ytdData.giro),
             achievement: '100%',
-            trend: mtdData.giro >= 0 ? 'up' : 'down',
+            mtdTrend: mtdData.giro >= 0 ? 'up' : 'down',
+            ytdTrend: ytdData.giro >= 0 ? 'up' : 'down',
             color: 'from-amber-500 to-amber-600'
         },
         {
@@ -386,7 +395,8 @@ else if (inBillion >= 10) {
             mtd: formatForPerformanceCard(mtdData.deposito),
             ytd: formatForPerformanceCard(ytdData.deposito),
             achievement: '100%',
-            trend: mtdData.deposito >= 0 ? 'up' : 'down',
+            mtdTrend: mtdData.deposito >= 0 ? 'up' : 'down',
+            ytdTrend: ytdData.deposito >= 0 ? 'up' : 'down',
             color: 'from-rose-500 to-rose-600'
         }
     ];
@@ -441,104 +451,104 @@ else if (inBillion >= 10) {
             </motion.div>
 
             {/* Performance Cards */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="mb-8"
-            >
-                <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <LineChart className="w-6 h-6 mr-3 text-emerald-500" />
-                    Kinerja DPK {selectedPeriod}
-                </h2>
+<motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.2 }}
+    className="mb-8"
+>
+    <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+        <LineChart className="w-6 h-6 mr-3 text-emerald-500" />
+        Kinerja DPK {selectedPeriod}
+    </h2>
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {performanceCards.map((item, index) => {
+                let achievementPercentage = item.achievement;
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {performanceCards.map((item, index) => {
-                            let achievementPercentage = item.achievement;
-                            
-                            if (item.name === 'DPK') {
-                                const targetItem = dpkData.targets.find(target => target.name === 'DPK');
-                                if (targetItem) {
-                                    const actualData = dpkData.historical.find(hist => hist.period === selectedPeriod);
-                                    const actualValue = actualData ? actualData.dpk : 0;
-                                    const positionValue = targetItem.position;
-                                    const achievementValue = positionValue !== 0 
-                                        ? (actualValue / positionValue) * 100 
-                                        : 0;
-                                    achievementPercentage = `${achievementValue.toFixed(1)}%`;
-                                }
-                            } else {
-                                const targetItem = dpkData.targets.find(target => target.name === item.name);
-                                
-                                if (targetItem) {
-                                    const actualData = dpkData.historical.find(hist => hist.period === selectedPeriod);
-                                    let actualValue = 0;
-                                    
-                                    switch(item.name) {
-                                        case 'CASA': actualValue = actualData ? actualData.casa : 0; break;
-                                        case 'Tabungan': actualValue = actualData ? actualData.tabungan : 0; break;
-                                        case 'Giro': actualValue = actualData ? actualData.giro : 0; break;
-                                        case 'Deposito': actualValue = actualData ? actualData.deposito : 0; break;
-                                    }
-                                    
-                                    const positionValue = targetItem.position;
-                                    const achievementValue = positionValue !== 0 
-                                        ? (actualValue / positionValue) * 100 
-                                        : 0;
-                                    achievementPercentage = `${achievementValue.toFixed(1)}%`;
-                                }
-                            }
-                            
-                            return (
-                                <div 
-                                    key={index} 
-                                    className="bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300"
-                                >
-                                    <div className={`h-2 bg-gradient-to-r ${item.color}`}></div>
-                                    <div className="p-6">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-center">
-                                                <div className="p-2 rounded-lg bg-gray-100 mr-3">
-                                                    <div className="text-emerald-500">
-                                                        {item.icon}
-                                                    </div>
-                                                </div>
-                                                <h3 className="text-lg font-bold text-gray-900">{item.name}</h3>
-                                            </div>
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                getAchievementColor(achievementPercentage)
-                                            }`}>
-                                                {achievementPercentage}
-                                            </span>
-                                        </div>
-                                        
-                                        <p className="text-2xl font-bold text-gray-900 mb-4">{item.value}</p>
-                                        
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">MTD:</span>
-                                                <div className="flex items-center">
-                                                    <span className="font-medium text-gray-900">{item.mtd}</span>
-                                                    <span className={`ml-2 ${getTrendColor(item.trend === 'up' ? 1 : -1)}`}>
-                                                        {getTrendIcon(item.trend === 'up' ? 1 : -1)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">YTD:</span>
-                                                <div className="flex items-center">
-                                                    <span className="font-medium text-gray-900">{item.ytd}</span>
-                                                    <span className={`ml-2 ${getTrendColor(item.trend === 'up' ? 1 : -1)}`}>
-                                                        {getTrendIcon(item.trend === 'up' ? 1 : -1)}
-                                                    </span>
-                                                </div>
-                                            </div>
+                if (item.name === 'DPK') {
+                    const targetItem = dpkData.targets.find(target => target.name === 'DPK');
+                    if (targetItem) {
+                        const actualData = dpkData.historical.find(hist => hist.period === selectedPeriod);
+                        const actualValue = actualData ? actualData.dpk : 0;
+                        const positionValue = targetItem.position;
+                        const achievementValue = positionValue !== 0 
+                            ? (actualValue / positionValue) * 100 
+                            : 0;
+                        achievementPercentage = `${achievementValue.toFixed(1)}%`;
+                    }
+                } else {
+                    const targetItem = dpkData.targets.find(target => target.name === item.name);
+                    
+                    if (targetItem) {
+                        const actualData = dpkData.historical.find(hist => hist.period === selectedPeriod);
+                        let actualValue = 0;
+                        
+                        switch(item.name) {
+                            case 'CASA': actualValue = actualData ? actualData.casa : 0; break;
+                            case 'Tabungan': actualValue = actualData ? actualData.tabungan : 0; break;
+                            case 'Giro': actualValue = actualData ? actualData.giro : 0; break;
+                            case 'Deposito': actualValue = actualData ? actualData.deposito : 0; break;
+                        }
+                        
+                        const positionValue = targetItem.position;
+                        const achievementValue = positionValue !== 0 
+                            ? (actualValue / positionValue) * 100 
+                            : 0;
+                        achievementPercentage = `${achievementValue.toFixed(1)}%`;
+                    }
+                }
+                
+                return (
+                    <div 
+                        key={index} 
+                        className="bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300"
+                    >
+                        <div className={`h-2 bg-gradient-to-r ${item.color}`}></div>
+                        <div className="p-6">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="flex items-center">
+                                    <div className="p-2 rounded-lg bg-gray-100 mr-3">
+                                        <div className="text-emerald-500">
+                                            {item.icon}
                                         </div>
                                     </div>
+                                    <h3 className="text-lg font-bold text-gray-900">{item.name}</h3>
                                 </div>
-                            );
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    getAchievementColor(achievementPercentage)
+                                }`}>
+                                    {achievementPercentage}
+                                </span>
+                            </div>
+                            
+                            <p className="text-2xl font-bold text-gray-900 mb-4">{item.value}</p>
+                            
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-600">MTD:</span>
+                                    <div className="flex items-center">
+                                        <span className="font-medium text-gray-900">{item.mtd}</span>
+                                        <span className={`ml-2 ${getTrendColor(item.mtdTrend === 'up' ? 1 : -1)}`}>
+                                            {getTrendIcon(item.mtdTrend === 'up' ? 1 : -1)}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-600">YTD:</span>
+                                    <div className="flex items-center">
+                                        <span className="font-medium text-gray-900">{item.ytd}</span>
+                                        <span className={`ml-2 ${getTrendColor(item.ytdTrend === 'up' ? 1 : -1)}`}>
+                                            {getTrendIcon(item.ytdTrend === 'up' ? 1 : -1)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
                         })}
                     </div>
                     

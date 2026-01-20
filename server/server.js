@@ -3,6 +3,7 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const { v4: uuidv4 } = require('uuid');
 require('dotenv').config();
 
 const app = express();
@@ -81,7 +82,7 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// 2. LOGIN (single admin user)
+// 2. LOGIN (single admin user) - DITAMBAHKAN LOG ACTIVITY
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -93,6 +94,9 @@ app.post('/api/login', async (req, res) => {
             });
         }
         
+        // Get user agent info
+        const userAgent = req.headers['user-agent'] || 'Unknown';
+        
         // Cari admin user
         const [users] = await pool.execute(
             `SELECT id, username, password, full_name 
@@ -102,6 +106,21 @@ app.post('/api/login', async (req, res) => {
         );
         
         if (users.length === 0) {
+            // Log failed login attempt
+            await pool.execute(
+                `INSERT INTO activity_logs (id, action, username, user_name, user_agent, device_type, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    uuidv4(),
+                    'login',
+                    username,
+                    'Unknown',
+                    userAgent,
+                    userAgent.includes('Mobile') ? 'Mobile' : 'Desktop',
+                    'failed'
+                ]
+            );
+            
             return res.status(401).json({ 
                 success: false, 
                 error: 'Invalid credentials' 
@@ -113,6 +132,21 @@ app.post('/api/login', async (req, res) => {
         // Verify password
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
+            // Log failed login attempt
+            await pool.execute(
+                `INSERT INTO activity_logs (id, action, username, user_name, user_agent, device_type, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    uuidv4(),
+                    'login',
+                    username,
+                    user.full_name,
+                    userAgent,
+                    userAgent.includes('Mobile') ? 'Mobile' : 'Desktop',
+                    'failed'
+                ]
+            );
+            
             return res.status(401).json({ 
                 success: false, 
                 error: 'Invalid credentials' 
@@ -126,6 +160,21 @@ app.post('/api/login', async (req, res) => {
         await pool.execute(
             'UPDATE users SET last_login = NOW() WHERE id = ?',
             [user.id]
+        );
+        
+        // Log successful login
+        await pool.execute(
+            `INSERT INTO activity_logs (id, action, username, user_name, user_agent, device_type, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+                uuidv4(),
+                'login',
+                user.username,
+                user.full_name,
+                userAgent,
+                userAgent.includes('Mobile') ? 'Mobile' : 'Desktop',
+                'success'
+            ]
         );
         
         // Hapus password dari response
@@ -162,7 +211,253 @@ app.get('/api/verify-token', authenticateToken, (req, res) => {
     });
 });
 
-// 4. GET ALL DPK DATA
+// ============ ACTIVITY LOGS ENDPOINTS ============
+
+// 4. GET ALL ACTIVITY LOGS
+app.get('/api/activity-logs', authenticateToken, async (req, res) => {
+    try {
+        const { 
+            limit = 50, 
+            page = 1, 
+            action, 
+            username,
+            startDate,
+            endDate,
+            status,
+            sortBy = 'created_at',
+            sortOrder = 'desc'
+        } = req.query;
+        
+        // Build WHERE clause
+        let whereClause = 'WHERE 1=1';
+        const params = [];
+        
+        if (action) {
+            whereClause += ' AND action = ?';
+            params.push(action);
+        }
+        
+        if (username) {
+            whereClause += ' AND username LIKE ?';
+            params.push(`%${username}%`);
+        }
+        
+        if (startDate) {
+            whereClause += ' AND DATE(created_at) >= ?';
+            params.push(startDate);
+        }
+        
+        if (endDate) {
+            whereClause += ' AND DATE(created_at) <= ?';
+            params.push(endDate);
+        }
+        
+        if (status) {
+            whereClause += ' AND status = ?';
+            params.push(status);
+        }
+        
+        // Validate sort parameters
+        const validSortColumns = ['created_at', 'username', 'action', 'status'];
+        const validSortOrders = ['asc', 'desc'];
+        
+        const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'created_at';
+        const sortDirection = validSortOrders.includes(sortOrder.toLowerCase()) ? sortOrder.toUpperCase() : 'DESC';
+        
+        // Calculate offset
+        const offset = (page - 1) * limit;
+        
+        // Get total count
+        const [countResult] = await pool.execute(
+            `SELECT COUNT(*) as total FROM activity_logs ${whereClause}`,
+            params
+        );
+        
+        const total = countResult[0].total;
+        
+        // Get logs with pagination
+        const [logs] = await pool.execute(
+            `SELECT * FROM activity_logs 
+             ${whereClause}
+             ORDER BY ${sortColumn} ${sortDirection}
+             LIMIT ? OFFSET ?`,
+            [...params, parseInt(limit), offset]
+        );
+        
+        res.json({
+            success: true,
+            data: logs,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / limit)
+            }
+        });
+        
+    } catch (error) {
+        console.error('Get activity logs error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to get activity logs' 
+        });
+    }
+});
+
+// 5. GET MY ACTIVITY LOGS
+app.get('/api/activity-logs/my', authenticateToken, async (req, res) => {
+    try {
+        const { limit = 20, page = 1 } = req.query;
+        const offset = (page - 1) * limit;
+        
+        const [logs] = await pool.execute(
+            `SELECT * FROM activity_logs 
+             WHERE username = ?
+             ORDER BY created_at DESC
+             LIMIT ? OFFSET ?`,
+            [req.user.username, parseInt(limit), offset]
+        );
+        
+        res.json({
+            success: true,
+            data: logs
+        });
+        
+    } catch (error) {
+        console.error('Get my activity logs error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to get activity logs' 
+        });
+    }
+});
+
+// 6. GET ACTIVITY STATISTICS
+app.get('/api/activity-logs/stats', authenticateToken, async (req, res) => {
+    try {
+        const { period = 'today', groupBy = 'action' } = req.query;
+        
+        let dateFilter = '';
+        let dateParams = [];
+        
+        switch (period) {
+            case 'today':
+                dateFilter = 'DATE(created_at) = CURDATE()';
+                break;
+            case 'yesterday':
+                dateFilter = 'DATE(created_at) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)';
+                break;
+            case 'week':
+                dateFilter = 'created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+                break;
+            case 'month':
+                dateFilter = 'created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
+                break;
+            default:
+                dateFilter = '1=1';
+        }
+        
+        let groupByClause = '';
+        let selectColumns = '';
+        
+        switch (groupBy) {
+            case 'action':
+                groupByClause = 'GROUP BY action';
+                selectColumns = 'action,';
+                break;
+            case 'user':
+                groupByClause = 'GROUP BY username, user_name';
+                selectColumns = 'username, user_name,';
+                break;
+            case 'status':
+                groupByClause = 'GROUP BY status';
+                selectColumns = 'status,';
+                break;
+            default:
+                groupByClause = 'GROUP BY action';
+                selectColumns = 'action,';
+        }
+        
+        // Get statistics
+        const [stats] = await pool.execute(
+            `SELECT 
+                ${selectColumns}
+                COUNT(*) as count
+             FROM activity_logs
+             WHERE ${dateFilter}
+             ${groupByClause}
+             ORDER BY count DESC`,
+            dateParams
+        );
+        
+        // Get total activities for the period
+        const [totalResult] = await pool.execute(
+            `SELECT COUNT(*) as total FROM activity_logs WHERE ${dateFilter}`,
+            dateParams
+        );
+        
+        // Get unique users for the period
+        const [usersResult] = await pool.execute(
+            `SELECT COUNT(DISTINCT username) as unique_users FROM activity_logs WHERE ${dateFilter}`,
+            dateParams
+        );
+        
+        res.json({
+            success: true,
+            stats,
+            summary: {
+                total: totalResult[0].total,
+                unique_users: usersResult[0].unique_users,
+                period
+            }
+        });
+        
+    } catch (error) {
+        console.error('Get activity stats error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to get activity statistics' 
+        });
+    }
+});
+
+// 7. LOGOUT WITH ACTIVITY LOG
+app.post('/api/logout', authenticateToken, async (req, res) => {
+    try {
+        const userAgent = req.headers['user-agent'] || 'Unknown';
+        
+        // Log logout activity
+        await pool.execute(
+            `INSERT INTO activity_logs (id, action, username, user_name, user_agent, device_type, status)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+                uuidv4(),
+                'logout',
+                req.user.username,
+                req.user.name,
+                userAgent,
+                userAgent.includes('Mobile') ? 'Mobile' : 'Desktop',
+                'success'
+            ]
+        );
+        
+        res.json({
+            success: true,
+            message: 'Logged out successfully'
+        });
+        
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Server error' 
+        });
+    }
+});
+
+// ============ EXISTING ENDPOINTS (dari server.js asli) ============
+
+// 9. GET ALL DPK DATA
 app.get('/api/dpk', authenticateToken, async (req, res) => {
     try {
         const [rows] = await pool.execute(
@@ -193,7 +488,7 @@ app.get('/api/dpk', authenticateToken, async (req, res) => {
     }
 });
 
-// 5. GET SPECIFIC PERIOD DPK DATA
+// 10. GET SPECIFIC PERIOD DPK DATA
 app.get('/api/dpk/:period', authenticateToken, async (req, res) => {
     try {
         const { period } = req.params;
@@ -225,7 +520,7 @@ app.get('/api/dpk/:period', authenticateToken, async (req, res) => {
     }
 });
 
-// 6. CREATE/UPDATE DPK DATA - FIXED dengan 18 kolom
+// 11. CREATE/UPDATE DPK DATA
 app.post('/api/dpk', authenticateToken, async (req, res) => {
     try {
         const {
@@ -410,8 +705,12 @@ app.post('/api/dpk', authenticateToken, async (req, res) => {
             
             [queryResult] = await pool.execute(updateQuery, updateParams);
             message = 'Data updated successfully';
+            
+            // Log activity - update_dpk
+            await logDataActivity('update_dpk', req);
+            
         } else {
-            // Insert new data - 18 KOLOM
+            // Insert new data
             const insertQuery = `
                 INSERT INTO dpk_data (
                     period, 
@@ -461,6 +760,9 @@ app.post('/api/dpk', authenticateToken, async (req, res) => {
             
             [queryResult] = await pool.execute(insertQuery, insertParams);
             message = 'Data created successfully';
+            
+            // Log activity - create_dpk
+            await logDataActivity('create_dpk', req);
         }
         
         console.log('✅ Database result:', queryResult);
@@ -491,7 +793,7 @@ app.post('/api/dpk', authenticateToken, async (req, res) => {
     }
 });
 
-// 7. DELETE DPK DATA
+// 12. DELETE DPK DATA
 app.delete('/api/dpk/:period', authenticateToken, async (req, res) => {
     try {
         const { period } = req.params;
@@ -508,6 +810,9 @@ app.delete('/api/dpk/:period', authenticateToken, async (req, res) => {
             });
         }
         
+        // Log activity - delete_dpk
+        await logDataActivity('delete_dpk', req);
+        
         res.json({
             success: true,
             message: 'Data deleted successfully'
@@ -522,7 +827,7 @@ app.delete('/api/dpk/:period', authenticateToken, async (req, res) => {
     }
 });
 
-// 8. GET DASHBOARD DATA
+// 13. GET DASHBOARD DATA
 app.get('/api/dashboard', authenticateToken, async (req, res) => {
     try {
         const [dpkData] = await pool.execute(
@@ -551,7 +856,7 @@ app.get('/api/dashboard', authenticateToken, async (req, res) => {
 
 // ============ PBY ENDPOINTS ============
 
-// 9. GET ALL PBY DATA
+// 14. GET ALL PBY DATA
 app.get('/api/pby', authenticateToken, async (req, res) => {
   try {
     const [rows] = await pool.execute(
@@ -590,7 +895,7 @@ app.get('/api/pby', authenticateToken, async (req, res) => {
   }
 });
 
-// 10. GET SPECIFIC PERIOD PBY DATA
+// 15. GET SPECIFIC PERIOD PBY DATA
 app.get('/api/pby/:period', authenticateToken, async (req, res) => {
   try {
     const { period } = req.params;
@@ -623,7 +928,7 @@ app.get('/api/pby/:period', authenticateToken, async (req, res) => {
   }
 });
 
-// 11. CREATE/UPDATE PBY DATA - VERSI FINAL PASTI BENAR
+// 16. CREATE/UPDATE PBY DATA
 app.post('/api/pby', authenticateToken, async (req, res) => {
   try {
     const {
@@ -661,7 +966,7 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
     console.log('📥 Received PBY data:');
     console.log(JSON.stringify(req.body, null, 2));
     
-    // 1. PARSE DATA
+    // Parse data
     const parseFloatOrNull = (val) => {
       if (val === undefined || val === null || val === '' || val === 'null') return null;
       const parsed = parseFloat(val);
@@ -746,7 +1051,7 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
     
     console.log('✅ Data parsed successfully');
     
-    // 2. CHECK IF DATA EXISTS
+    // Check if data exists
     const [existing] = await pool.execute(
       'SELECT id FROM pby_data WHERE period = ? AND branch_id = ?',
       [period, BRANCH_INFO.id]
@@ -755,7 +1060,7 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
     let message;
     
     if (existing.length > 0) {
-      // 3A. UPDATE EXISTING DATA
+      // UPDATE EXISTING DATA
       const updateQuery = `
         UPDATE pby_data SET 
           date = ?,
@@ -798,8 +1103,11 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
       await pool.execute(updateQuery, updateParams);
       message = 'Data PBY berhasil diupdate';
       
+      // Log activity - update_pby
+      await logDataActivity('update_pby', req);
+      
     } else {
-      // 3B. INSERT NEW DATA - INI YANG PASTI BENAR
+      // INSERT NEW DATA
       const insertQuery = `
         INSERT INTO pby_data (
           period, date,
@@ -820,44 +1128,27 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       
-      // 39 PARAMS - SESUAI DENGAN 39 KOLOM DI ATAS
       const insertParams = [
-        // period, date (2)
         period, formattedDate,
-        // branch_id, branch_name, area (3)
         BRANCH_INFO.id, BRANCH_INFO.name, BRANCH_INFO.area,
-        // griya, griya_cair, griya_runoff (3)
         griyaValue, griyaCairValue, griyaRunoffValue,
-        // oto, oto_cair, oto_runoff (3)
         otoValue, otoCairValue, otoRunoffValue,
-        // mitraguna, mitraguna_cair, mitraguna_runoff (3)
         mitragunaValue, mitragunaCairValue, mitragunaRunoffValue,
-        // pensiun, pensiun_cair, pensiun_runoff (3)
         pensiunValue, pensiunCairValue, pensiunRunoffValue,
-        // cicil_emas, cicil_emas_cair, cicil_emas_runoff (3)
         cicilEmasValue, cicilEmasCairValue, cicilEmasRunoffValue,
-        // cfg, pwg, pby (3)
         cfgValue, pwgValue, pbyValue,
-        // cfg_cair, cfg_runoff (2)
         cfgCairValue, cfgRunoffValue,
-        // pwg_cair, pwg_runoff (2)
         pwgCairValue, pwgRunoffValue,
-        // pby_cair, pby_runoff (2)
         pbyCairValue, pbyRunoffValue,
-        // target_cfg, target_pwg, target_pby (3)
         targetCFGValue, targetPWGValue, targetPBYValue,
-        // target_griya, target_oto, target_mitraguna (3)
         targetGriyaValue, targetOtoValue, targetMitragunaValue,
-        // target_pensiun, target_cicil_emas (2)
         targetPensiunValue, targetCicilEmasValue,
-        // notes, created_by (2)
         notes && notes !== 'null' ? notes : null,
         req.user.username || 'admin'
       ];
       
       console.log(`➕ INSERT with ${insertParams.length} params`);
       
-      // VERIFIKASI: Hitung placeholder di query
       const placeholders = (insertQuery.match(/\?/g) || []).length;
       console.log(`🔢 Query has ${placeholders} placeholders`);
       console.log(`🔢 We have ${insertParams.length} parameters`);
@@ -871,9 +1162,12 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
       
       await pool.execute(insertQuery, insertParams);
       message = 'Data PBY berhasil disimpan';
+      
+      // Log activity - create_pby
+      await logDataActivity('create_pby', req);
     }
     
-    // 4. GET SAVED DATA
+    // Get saved data
     const [savedData] = await pool.execute(
       'SELECT * FROM pby_data WHERE period = ? AND branch_id = ?',
       [period, BRANCH_INFO.id]
@@ -912,7 +1206,7 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
   }
 });
 
-// 12. DELETE PBY DATA
+// 17. DELETE PBY DATA
 app.delete('/api/pby/:period', authenticateToken, async (req, res) => {
   try {
     const { period } = req.params;
@@ -929,6 +1223,9 @@ app.delete('/api/pby/:period', authenticateToken, async (req, res) => {
       });
     }
     
+    // Log activity - delete_pby
+    await logDataActivity('delete_pby', req);
+    
     res.json({
       success: true,
       message: 'Data PBY deleted successfully'
@@ -943,7 +1240,7 @@ app.delete('/api/pby/:period', authenticateToken, async (req, res) => {
   }
 });
 
-// 13. GET PROFILE (existing)
+// 18. GET PROFILE
 app.get('/api/profile', authenticateToken, async (req, res) => {
   try {
     const [users] = await pool.execute(
@@ -977,7 +1274,220 @@ app.get('/api/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// 14. GET MY BRANCH INFO
+// ============ USER PROFILE ENDPOINTS ============
+
+// 19. UPDATE USER PROFILE
+app.patch('/api/users/profile', authenticateToken, async (req, res) => {
+  try {
+    const { full_name, username } = req.body;
+    
+    if (!full_name || !username) {
+      return res.status(400).json({
+        success: false,
+        error: 'full_name dan username wajib diisi'
+      });
+    }
+    
+    // Cek jika username sudah digunakan oleh user lain
+    const [existingUsers] = await pool.execute(
+      'SELECT id FROM users WHERE username = ? AND id != ?',
+      [username, req.user.id]
+    );
+    
+    if (existingUsers.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: 'Username sudah digunakan'
+      });
+    }
+    
+    // Update user profile
+    await pool.execute(
+      `UPDATE users SET 
+        full_name = ?, 
+        username = ?, 
+        updated_at = NOW() 
+       WHERE id = ?`,
+      [full_name, username, req.user.id]
+    );
+    
+    // Get updated user data
+    const [users] = await pool.execute(
+      `SELECT 
+        id, 
+        employee_id, 
+        username, 
+        full_name, 
+        email, 
+        branch_code, 
+        position, 
+        role, 
+        is_active, 
+        last_login, 
+        created_at 
+       FROM users WHERE id = ?`,
+      [req.user.id]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    const updatedUser = users[0];
+    
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        ...updatedUser,
+        branch: BRANCH_INFO
+      }
+    });
+    
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update profile'
+    });
+  }
+});
+
+// 20. CHANGE PASSWORD
+app.patch('/api/users/password', authenticateToken, async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    
+    if (!current_password || !new_password) {
+      return res.status(400).json({
+        success: false,
+        error: 'current_password dan new_password wajib diisi'
+      });
+    }
+    
+    if (new_password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password baru minimal 6 karakter'
+      });
+    }
+    
+    // Get user with password
+    const [users] = await pool.execute(
+      'SELECT id, password FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    const user = users[0];
+    
+    // Verify current password
+    const validPassword = await bcrypt.compare(current_password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({
+        success: false,
+        error: 'Password saat ini salah'
+      });
+    }
+    
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(new_password, salt);
+    
+    // Update password
+    await pool.execute(
+      'UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?',
+      [hashedPassword, req.user.id]
+    );
+    
+    // Log activity - change_password
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+    await pool.execute(
+      `INSERT INTO activity_logs (id, action, username, user_name, user_agent, device_type, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        uuidv4(),
+        'change_password',
+        req.user.username,
+        req.user.name,
+        userAgent,
+        userAgent.includes('Mobile') ? 'Mobile' : 'Desktop',
+        'success'
+      ]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+    
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to change password'
+    });
+  }
+});
+
+// 21. GET USER DETAILS
+app.get('/api/users/me', authenticateToken, async (req, res) => {
+  try {
+    const [users] = await pool.execute(
+      `SELECT 
+        id, 
+        employee_id, 
+        username, 
+        full_name, 
+        email, 
+        branch_code, 
+        position, 
+        role, 
+        is_active, 
+        last_login, 
+        created_at 
+       FROM users WHERE id = ?`,
+      [req.user.id]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    const user = users[0];
+    
+    res.json({
+      success: true,
+      user: {
+        ...user,
+        branch: BRANCH_INFO
+      }
+    });
+    
+  } catch (error) {
+    console.error('Get user details error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user details'
+    });
+  }
+});
+
+// ============ BRANCH INFO ENDPOINTS ============
+
+// 22. GET MY BRANCH INFO
 app.get('/api/my-branch', authenticateToken, (req, res) => {
   res.json({
     success: true,
@@ -985,7 +1495,7 @@ app.get('/api/my-branch', authenticateToken, (req, res) => {
   });
 });
 
-// 15. GET BRANCH DATA (combine DPK and PBY)
+// 23. GET BRANCH DATA
 app.get('/api/branch-data', authenticateToken, async (req, res) => {
   try {
     const [dpkData] = await pool.execute(
@@ -1014,6 +1524,353 @@ app.get('/api/branch-data', authenticateToken, async (req, res) => {
   }
 });
 
+// ============ KOL2 ENDPOINTS ============
+
+// 24. GET ALL KOL2 DATA
+app.get('/api/kol2', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT * FROM kol2_data 
+       ORDER BY 
+         CASE 
+           WHEN period LIKE '%Dec%' THEN 1
+           WHEN period LIKE '%Jan%' THEN 2
+           WHEN period LIKE '%Feb%' THEN 3
+           WHEN period LIKE '%Mar%' THEN 4
+           WHEN period LIKE '%Apr%' THEN 5
+           WHEN period LIKE '%May%' THEN 6
+           WHEN period LIKE '%Jun%' THEN 7
+           WHEN period LIKE '%Jul%' THEN 8
+           WHEN period LIKE '%Aug%' THEN 9
+           WHEN period LIKE '%Sep%' THEN 10
+           WHEN period LIKE '%Oct%' THEN 11
+           WHEN period LIKE '%Nov%' THEN 12
+           ELSE 13
+         END DESC`
+    );
+    
+    res.json({
+      success: true,
+      data: rows
+    });
+    
+  } catch (error) {
+    console.error('Get KOL2 data error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to get KOL2 data' 
+    });
+  }
+});
+
+// 25. GET SPECIFIC PERIOD KOL2 DATA
+app.get('/api/kol2/:period', authenticateToken, async (req, res) => {
+  try {
+    const { period } = req.params;
+    
+    const [rows] = await pool.execute(
+      `SELECT * FROM kol2_data WHERE period = ?`,
+      [period]
+    );
+    
+    if (rows.length === 0) {
+      return res.json({
+        success: true,
+        data: null,
+        message: 'No KOL2 data found for this period'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: rows[0]
+    });
+    
+  } catch (error) {
+    console.error('Get KOL2 period error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Server error' 
+    });
+  }
+});
+
+// 26. CREATE/UPDATE KOL2 DATA
+app.post('/api/kol2', authenticateToken, async (req, res) => {
+  try {
+    const {
+      period,
+      date,
+      griya,
+      oto,
+      mitraguna,
+      pensiun,
+      cicil_emas,
+      cfg,
+      pwg,
+      kol2,
+      notes
+    } = req.body;
+    
+    console.log('📥 Received KOL2 data:');
+    console.log(JSON.stringify(req.body, null, 2));
+    
+    // Parse data
+    const parseFloatOrZero = (val) => {
+      if (val === undefined || val === null || val === '' || val === 'null') return 0;
+      const parsed = parseFloat(val);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+    
+    const griyaValue = parseFloatOrZero(griya);
+    const otoValue = parseFloatOrZero(oto);
+    const mitragunaValue = parseFloatOrZero(mitraguna);
+    const pensiunValue = parseFloatOrZero(pensiun);
+    const cicilEmasValue = parseFloatOrZero(cicil_emas);
+    
+    // Auto-calculate jika tidak dikirim
+    const cfgValue = parseFloatOrZero(cfg !== undefined ? cfg : (griyaValue + otoValue + mitragunaValue + pensiunValue));
+    const pwgValue = parseFloatOrZero(pwg !== undefined ? pwg : cicilEmasValue);
+    const kol2Value = parseFloatOrZero(kol2 !== undefined ? kol2 : (cfgValue + pwgValue));
+    
+    // Format date
+    let formattedDate = null;
+    if (date && date !== 'null') {
+      try {
+        if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          formattedDate = date;
+        } else if (date.match(/^\d{2}-\w{3}-\d{4}$/)) {
+          const parts = date.split('-');
+          const months = {
+            'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+            'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+            'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+          };
+          const day = parts[0];
+          const month = months[parts[1]];
+          const year = parts[2];
+          formattedDate = `${year}-${month}-${day}`;
+        }
+      } catch (err) {
+        console.log(`⚠️ Error parsing date:`, err.message);
+      }
+    }
+    
+    console.log('✅ KOL2 Data parsed successfully');
+    console.log('📊 Values:', {
+      griya: griyaValue,
+      oto: otoValue,
+      mitraguna: mitragunaValue,
+      pensiun: pensiunValue,
+      cicil_emas: cicilEmasValue,
+      cfg: cfgValue,
+      pwg: pwgValue,
+      kol2: kol2Value
+    });
+    
+    // Check if data already exists
+    const [existing] = await pool.execute(
+      'SELECT id FROM kol2_data WHERE period = ?',
+      [period]
+    );
+    
+    let message;
+    let query;
+    
+    if (existing.length > 0) {
+      // UPDATE EXISTING DATA
+      query = `
+        UPDATE kol2_data SET 
+          date = ?,
+          griya = ?, 
+          oto = ?, 
+          mitraguna = ?, 
+          pensiun = ?, 
+          cicil_emas = ?,
+          cfg = ?, 
+          pwg = ?, 
+          kol2 = ?,
+          notes = ?, 
+          updated_at = CURRENT_TIMESTAMP,
+          created_by = ?
+        WHERE period = ?
+      `;
+      
+      const params = [
+        formattedDate,
+        griyaValue, 
+        otoValue, 
+        mitragunaValue, 
+        pensiunValue, 
+        cicilEmasValue,
+        cfgValue, 
+        pwgValue, 
+        kol2Value,
+        notes && notes !== 'null' ? notes : null,
+        req.user.username || 'admin',
+        period
+      ];
+      
+      console.log(`📝 UPDATE KOL2 query`);
+      await pool.execute(query, params);
+      message = 'Data KOL2 berhasil diupdate';
+      
+      // Log activity - update_kol2
+      await logDataActivity('update_kol2', req);
+      
+    } else {
+      // INSERT NEW DATA
+      query = `
+        INSERT INTO kol2_data (
+          period, 
+          date,
+          branch_id, 
+          branch_name, 
+          area,
+          griya, 
+          oto, 
+          mitraguna, 
+          pensiun, 
+          cicil_emas,
+          cfg, 
+          pwg, 
+          kol2,
+          notes, 
+          created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      
+      const params = [
+        period, 
+        formattedDate,
+        'KCP-TEMPO-001', 
+        'KCP Jakarta Tempo Pavillion 2', 
+        'AREA JAKARTA SAHARJO',
+        griyaValue, 
+        otoValue, 
+        mitragunaValue, 
+        pensiunValue, 
+        cicilEmasValue,
+        cfgValue, 
+        pwgValue, 
+        kol2Value,
+        notes && notes !== 'null' ? notes : null,
+        req.user.username || 'admin'
+      ];
+      
+      console.log(`➕ INSERT KOL2 query with ${params.length} params`);
+      console.log('➕ Params:', params);
+      
+      await pool.execute(query, params);
+      message = 'Data KOL2 berhasil disimpan';
+      
+      // Log activity - create_kol2
+      await logDataActivity('create_kol2', req);
+    }
+    
+    // Get saved data
+    const [savedData] = await pool.execute(
+      'SELECT * FROM kol2_data WHERE period = ?',
+      [period]
+    );
+    
+    console.log('✅ KOL2 data saved successfully!');
+    
+    res.json({
+      success: true,
+      message,
+      data: savedData[0] || null
+    });
+    
+  } catch (error) {
+    console.error('❌ Save KOL2 error:', error.message);
+    console.error('🔍 Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage,
+      sql: error.sql
+    });
+    
+    let errorMessage = 'Gagal menyimpan data KOL2';
+    let statusCode = 500;
+    
+    if (error.code === 'ER_DUP_ENTRY') {
+      statusCode = 409;
+      errorMessage = 'Data untuk periode ini sudah ada';
+    } else if (error.sqlMessage) {
+      errorMessage = `Database error: ${error.sqlMessage}`;
+    }
+    
+    res.status(statusCode).json({
+      success: false,
+      error: errorMessage,
+      details: error.message
+    });
+  }
+});
+
+// 27. DELETE KOL2 DATA
+app.delete('/api/kol2/:period', authenticateToken, async (req, res) => {
+  try {
+    const { period } = req.params;
+    
+    const [result] = await pool.execute(
+      'DELETE FROM kol2_data WHERE period = ?',
+      [period]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'KOL2 data not found' 
+      });
+    }
+    
+    // Log activity - delete_kol2
+    await logDataActivity('delete_kol2', req);
+    
+    res.json({
+      success: true,
+      message: 'Data KOL2 deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('Delete KOL2 error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Server error' 
+    });
+  }
+});
+
+// ============ HELPER FUNCTIONS ============
+
+// Helper function untuk log activity ketika ada perubahan data
+async function logDataActivity(action, req) {
+  try {
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+    
+    await pool.execute(
+      `INSERT INTO activity_logs (id, action, username, user_name, user_agent, device_type, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        uuidv4(),
+        action,
+        req.user.username,
+        req.user.name,
+        userAgent,
+        userAgent.includes('Mobile') ? 'Mobile' : 'Desktop',
+        'success'
+      ]
+    );
+  } catch (error) {
+    console.error('Error logging data activity:', error);
+    // Jangan throw error, karena ini hanya logging
+  }
+}
+
 // ============ ERROR HANDLING ============
 
 // Error handling middleware
@@ -1041,4 +1898,5 @@ app.listen(PORT, () => {
     console.log(`🏢 Branch: ${BRANCH_INFO.name}`);
     console.log(`📍 Area: ${BRANCH_INFO.area}`);
     console.log(`🔐 Single Admin Mode`);
+    console.log(`📊 Activity Logging: ENABLED`);
 });
