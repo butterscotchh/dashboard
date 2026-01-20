@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Input from './pages/Input'; // Tambah import Input
 import ProtectedRoute from './components/ProtectedRoute';
+import Profile from './pages/Profile'; // Tambah import Profile
 
 function App() {
   return (
@@ -23,6 +24,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Input />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/profile"  // TAMBAH ROUTE PROFILE
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           } 
         />

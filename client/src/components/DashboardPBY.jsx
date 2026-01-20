@@ -213,6 +213,11 @@ const DashboardPBY = ({ user, dashboardData }) => {
             historical: historicalData,
             targets: targetData
         });
+
+        // Set selected period to latest if not set
+        if (historicalData.length > 0 && !selectedPeriod) {
+            setSelectedPeriod(historicalData[historicalData.length - 1].period);
+        }
     };
 
     // Hitung MTD
@@ -456,105 +461,113 @@ else if (inBillion >= 10) {
         }
     };
 
-    // Get performance cards - URUTAN: PBY → CFG → Griya → Oto → Mitraguna → Pensiun → PWG → Cicil Emas
-    const getPerformanceCards = () => {
-        const latestData = pbyData.historical.find(item => item.period === selectedPeriod);
-        if (!latestData) return [];
+   // Get performance cards - URUTAN: PBY → CFG → Griya → Oto → Mitraguna → Pensiun → PWG → Cicil Emas
+const getPerformanceCards = () => {
+    const latestData = pbyData.historical.find(item => item.period === selectedPeriod);
+    if (!latestData) return [];
 
-        const mtdData = calculateMTD();
-        const ytdData = calculateYTD();
+    const mtdData = calculateMTD();
+    const ytdData = calculateYTD();
 
-        return [
-            {
-                name: 'PBY',
-                value: formatForPerformanceCard(latestData.pby),
-                icon: getSegmentIcon('PBY'),
-                mtd: formatForPerformanceCard(mtdData.pby),
-                ytd: formatForPerformanceCard(ytdData.pby),
-                achievement: '100%',
-                trend: mtdData.pby >= 0 ? 'up' : 'down',
-                color: getSegmentColor('PBY'),
-                type: 'main'
-            },
-            {
-                name: 'CFG',
-                value: formatForPerformanceCard(latestData.cfg),
-                icon: getSegmentIcon('CFG'),
-                mtd: formatForPerformanceCard(mtdData.cfg),
-                ytd: formatForPerformanceCard(ytdData.cfg),
-                achievement: '100%',
-                trend: mtdData.cfg >= 0 ? 'up' : 'down',
-                color: getSegmentColor('CFG'),
-                type: 'sub'
-            },
-            {
-                name: 'Griya',
-                value: formatForPerformanceCard(latestData.griya),
-                icon: getSegmentIcon('Griya'),
-                mtd: formatForPerformanceCard(mtdData.griya),
-                ytd: formatForPerformanceCard(ytdData.griya),
-                achievement: '100%',
-                trend: mtdData.griya >= 0 ? 'up' : 'down',
-                color: getSegmentColor('Griya'),
-                type: 'segment'
-            },
-            {
-                name: 'Oto',
-                value: formatForPerformanceCard(latestData.oto),
-                icon: getSegmentIcon('Oto'),
-                mtd: formatForPerformanceCard(mtdData.oto),
-                ytd: formatForPerformanceCard(ytdData.oto),
-                achievement: '100%',
-                trend: mtdData.oto >= 0 ? 'up' : 'down',
-                color: getSegmentColor('Oto'),
-                type: 'segment'
-            },
-            {
-                name: 'Mitraguna',
-                value: formatForPerformanceCard(latestData.mitraguna),
-                icon: getSegmentIcon('Mitraguna'),
-                mtd: formatForPerformanceCard(mtdData.mitraguna),
-                ytd: formatForPerformanceCard(ytdData.mitraguna),
-                achievement: '100%',
-                trend: mtdData.mitraguna >= 0 ? 'up' : 'down',
-                color: getSegmentColor('Mitraguna'),
-                type: 'segment'
-            },
-            {
-                name: 'Pensiun',
-                value: formatForPerformanceCard(latestData.pensiun),
-                icon: getSegmentIcon('Pensiun'),
-                mtd: formatForPerformanceCard(mtdData.pensiun),
-                ytd: formatForPerformanceCard(ytdData.pensiun),
-                achievement: '100%',
-                trend: mtdData.pensiun >= 0 ? 'up' : 'down',
-                color: getSegmentColor('Pensiun'),
-                type: 'segment'
-            },
-            {
-                name: 'PWG',
-                value: formatForPerformanceCard(latestData.pwg),
-                icon: getSegmentIcon('PWG'),
-                mtd: formatForPerformanceCard(mtdData.pwg),
-                ytd: formatForPerformanceCard(ytdData.pwg),
-                achievement: '100%',
-                trend: mtdData.pwg >= 0 ? 'up' : 'down',
-                color: getSegmentColor('PWG'),
-                type: 'sub'
-            },
-            {
-                name: 'Cicil Emas',
-                value: formatForPerformanceCard(latestData.cicil_emas),
-                icon: getSegmentIcon('Cicil Emas'),
-                mtd: formatForPerformanceCard(mtdData.cicil_emas),
-                ytd: formatForPerformanceCard(ytdData.cicil_emas),
-                achievement: '100%',
-                trend: mtdData.cicil_emas >= 0 ? 'up' : 'down',
-                color: getSegmentColor('Cicil Emas'),
-                type: 'segment'
-            }
-        ];
-    };
+    return [
+        {
+            name: 'PBY',
+            value: formatForPerformanceCard(latestData.pby),
+            icon: getSegmentIcon('PBY'),
+            mtd: formatForPerformanceCard(mtdData.pby),
+            ytd: formatForPerformanceCard(ytdData.pby),
+            achievement: '100%',
+            mtdTrend: mtdData.pby >= 0 ? 'up' : 'down',
+            ytdTrend: ytdData.pby >= 0 ? 'up' : 'down',
+            color: getSegmentColor('PBY'),
+            type: 'main'
+        },
+        {
+            name: 'CFG',
+            value: formatForPerformanceCard(latestData.cfg),
+            icon: getSegmentIcon('CFG'),
+            mtd: formatForPerformanceCard(mtdData.cfg),
+            ytd: formatForPerformanceCard(ytdData.cfg),
+            achievement: '100%',
+            mtdTrend: mtdData.cfg >= 0 ? 'up' : 'down',
+            ytdTrend: ytdData.cfg >= 0 ? 'up' : 'down',
+            color: getSegmentColor('CFG'),
+            type: 'sub'
+        },
+        {
+            name: 'Griya',
+            value: formatForPerformanceCard(latestData.griya),
+            icon: getSegmentIcon('Griya'),
+            mtd: formatForPerformanceCard(mtdData.griya),
+            ytd: formatForPerformanceCard(ytdData.griya),
+            achievement: '100%',
+            mtdTrend: mtdData.griya >= 0 ? 'up' : 'down',
+            ytdTrend: ytdData.griya >= 0 ? 'up' : 'down',
+            color: getSegmentColor('Griya'),
+            type: 'segment'
+        },
+        {
+            name: 'Oto',
+            value: formatForPerformanceCard(latestData.oto),
+            icon: getSegmentIcon('Oto'),
+            mtd: formatForPerformanceCard(mtdData.oto),
+            ytd: formatForPerformanceCard(ytdData.oto),
+            achievement: '100%',
+            mtdTrend: mtdData.oto >= 0 ? 'up' : 'down',
+            ytdTrend: ytdData.oto >= 0 ? 'up' : 'down',
+            color: getSegmentColor('Oto'),
+            type: 'segment'
+        },
+        {
+            name: 'Mitraguna',
+            value: formatForPerformanceCard(latestData.mitraguna),
+            icon: getSegmentIcon('Mitraguna'),
+            mtd: formatForPerformanceCard(mtdData.mitraguna),
+            ytd: formatForPerformanceCard(ytdData.mitraguna),
+            achievement: '100%',
+            mtdTrend: mtdData.mitraguna >= 0 ? 'up' : 'down',
+            ytdTrend: ytdData.mitraguna >= 0 ? 'up' : 'down',
+            color: getSegmentColor('Mitraguna'),
+            type: 'segment'
+        },
+        {
+            name: 'Pensiun',
+            value: formatForPerformanceCard(latestData.pensiun),
+            icon: getSegmentIcon('Pensiun'),
+            mtd: formatForPerformanceCard(mtdData.pensiun),
+            ytd: formatForPerformanceCard(ytdData.pensiun),
+            achievement: '100%',
+            mtdTrend: mtdData.pensiun >= 0 ? 'up' : 'down',
+            ytdTrend: ytdData.pensiun >= 0 ? 'up' : 'down',
+            color: getSegmentColor('Pensiun'),
+            type: 'segment'
+        },
+        {
+            name: 'PWG',
+            value: formatForPerformanceCard(latestData.pwg),
+            icon: getSegmentIcon('PWG'),
+            mtd: formatForPerformanceCard(mtdData.pwg),
+            ytd: formatForPerformanceCard(ytdData.pwg),
+            achievement: '100%',
+            mtdTrend: mtdData.pwg >= 0 ? 'up' : 'down',
+            ytdTrend: ytdData.pwg >= 0 ? 'up' : 'down',
+            color: getSegmentColor('PWG'),
+            type: 'sub'
+        },
+        {
+            name: 'Cicil Emas',
+            value: formatForPerformanceCard(latestData.cicil_emas),
+            icon: getSegmentIcon('Cicil Emas'),
+            mtd: formatForPerformanceCard(mtdData.cicil_emas),
+            ytd: formatForPerformanceCard(ytdData.cicil_emas),
+            achievement: '100%',
+            mtdTrend: mtdData.cicil_emas >= 0 ? 'up' : 'down',
+            ytdTrend: ytdData.cicil_emas >= 0 ? 'up' : 'down',
+            color: getSegmentColor('Cicil Emas'),
+            type: 'segment'
+        }
+    ];
+};
 
     const performanceCards = getPerformanceCards();
 
@@ -649,87 +662,87 @@ else if (inBillion >= 10) {
                 </div>
             </motion.div>
 
-            {/* Performance Cards - URUTAN: PBY → CFG → Griya → Oto → Mitraguna → Pensiun → PWG → Cicil Emas */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="mb-8"
-            >
-                <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                    <LineChart className="w-6 h-6 mr-3 text-emerald-500" />
-                    Kinerja PBY {selectedPeriod}
-                </h2>
+           {/* Performance Cards - URUTAN: PBY → CFG → Griya → Oto → Mitraguna → Pensiun → PWG → Cicil Emas */}
+<motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.2 }}
+    className="mb-8"
+>
+    <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+        <LineChart className="w-6 h-6 mr-3 text-emerald-500" />
+        Kinerja PBY {selectedPeriod}
+    </h2>
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {performanceCards.map((item, index) => {
+                // Calculate achievement percentage
+                let achievementPercentage = item.achievement;
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {performanceCards.map((item, index) => {
-                            // Calculate achievement percentage
-                            let achievementPercentage = item.achievement;
-                            
-                            const targetItem = pbyData.targets.find(target => target.name === item.name);
-                            
-                            if (targetItem) {
-                                const actualData = pbyData.historical.find(hist => hist.period === selectedPeriod);
-                                const actualValue = getActualValue(item.name, actualData || {});
-                                const positionValue = targetItem.position;
-                                const achievementValue = positionValue !== 0 
-                                    ? (actualValue / positionValue) * 100 
-                                    : 0;
-                                achievementPercentage = `${achievementValue.toFixed(1)}%`;
-                            }
-                            
-                            return (
-                                <div 
-                                    key={index} 
-                                    className="bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300"
-                                >
-                                    <div className={`h-2 bg-gradient-to-r ${item.color}`}></div>
-                                    <div className="p-6">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-center">
-                                                <div className="p-2 rounded-lg bg-gray-100 mr-3">
-                                                    <div className="text-emerald-500">
-                                                        {item.icon}
-                                                    </div>
-                                                </div>
-                                                <h3 className="text-lg font-bold text-gray-900">{item.name}</h3>
-                                            </div>
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                getAchievementColor(achievementPercentage)
-                                            }`}>
-                                                {achievementPercentage}
-                                            </span>
-                                        </div>
-                                        
-                                        <p className="text-2xl font-bold text-gray-900 mb-4">{item.value}</p>
-                                        
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">MTD:</span>
-                                                <div className="flex items-center">
-                                                    <span className="font-medium text-gray-900">{item.mtd}</span>
-                                                    <span className={`ml-2 ${getTrendColor(item.trend === 'up' ? 1 : -1)}`}>
-                                                        {getTrendIcon(item.trend === 'up' ? 1 : -1)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">YTD:</span>
-                                                <div className="flex items-center">
-                                                    <span className="font-medium text-gray-900">{item.ytd}</span>
-                                                    <span className={`ml-2 ${getTrendColor(item.trend === 'up' ? 1 : -1)}`}>
-                                                        {getTrendIcon(item.trend === 'up' ? 1 : -1)}
-                                                    </span>
-                                                </div>
-                                            </div>
+                const targetItem = pbyData.targets?.find(target => target.name === item.name);
+                
+                if (targetItem) {
+                    const actualData = pbyData.historical.find(hist => hist.period === selectedPeriod);
+                    const actualValue = getActualValue(item.name, actualData || {});
+                    const positionValue = targetItem.position;
+                    const achievementValue = positionValue !== 0 
+                        ? (actualValue / positionValue) * 100 
+                        : 0;
+                    achievementPercentage = `${achievementValue.toFixed(1)}%`;
+                }
+                
+                return (
+                    <div 
+                        key={index} 
+                        className="bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300"
+                    >
+                        <div className={`h-2 bg-gradient-to-r ${item.color}`}></div>
+                        <div className="p-6">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="flex items-center">
+                                    <div className="p-2 rounded-lg bg-gray-100 mr-3">
+                                        <div className="text-emerald-500">
+                                            {item.icon}
                                         </div>
                                     </div>
+                                    <h3 className="text-lg font-bold text-gray-900">{item.name}</h3>
                                 </div>
-                            );
-                        })}
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    getAchievementColor(achievementPercentage)
+                                }`}>
+                                    {achievementPercentage}
+                                </span>
+                            </div>
+                            
+                            <p className="text-2xl font-bold text-gray-900 mb-4">{item.value}</p>
+                            
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-600">MTD:</span>
+                                    <div className="flex items-center">
+                                        <span className="font-medium text-gray-900">{item.mtd}</span>
+                                        <span className={`ml-2 ${getTrendColor(item.mtdTrend === 'up' ? 1 : -1)}`}>
+                                            {getTrendIcon(item.mtdTrend === 'up' ? 1 : -1)}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-600">YTD:</span>
+                                    <div className="flex items-center">
+                                        <span className="font-medium text-gray-900">{item.ytd}</span>
+                                        <span className={`ml-2 ${getTrendColor(item.ytdTrend === 'up' ? 1 : -1)}`}>
+                                            {getTrendIcon(item.ytdTrend === 'up' ? 1 : -1)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                );
+            })}
+        </div>
                     
                     {/* Pie Chart - Komposisi PBY per Segment */}
                     <div className="bg-white rounded-2xl shadow-lg border border-gray-100">

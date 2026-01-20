@@ -40,6 +40,14 @@ api.interceptors.response.use(
     }
 );
 
+// Helper function untuk detect device type
+const getDeviceType = () => {
+    const ua = navigator.userAgent;
+    if (/mobile/i.test(ua)) return 'Mobile';
+    if (/tablet/i.test(ua)) return 'Tablet';
+    return 'Desktop';
+};
+
 const authService = {
     // ============ AUTHENTICATION ============
     
@@ -64,12 +72,59 @@ const authService = {
         }
     },
     
-    // Logout
-    logout() {
+    // Logout - BEST SOLUTION (Balance UX & Data Integrity)
+async logout() {
+    try {
+        const user = this.getCurrentUser();
+        
+        // 1. LOG ACTIVITY DI BACKGROUND (jangan tunggu)
+        this.logActivity('logout', { username: user?.username })
+            .catch(err => console.warn('Background activity log failed:', err));
+        
+        // 2. KIRIM LOGOUT REQUEST DENGAN TIMEOUT (max 2 detik)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        try {
+            await api.post('/logout', {}, { signal: controller.signal });
+        } catch (apiError) {
+            if (apiError.name === 'AbortError') {
+                console.log('Logout API timeout, proceeding anyway');
+            } else {
+                console.warn('Logout API error:', apiError);
+            }
+        } finally {
+            clearTimeout(timeoutId);
+        }
+        
+        // 3. HAPUS DATA LOKAL
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
-        return { success: true, message: 'Logged out successfully' };
-    },
+        
+        // 4. REDIRECT CEPAT
+        setTimeout(() => {
+            window.location.href = '/login';
+        }, 50); // Delay kecil untuk smooth transition
+        
+        return { 
+            success: true, 
+            message: 'Logged out successfully' 
+        };
+        
+    } catch (error) {
+        console.error('Unexpected logout error:', error);
+        
+        // FALLBACK: Pastikan data dihapus dan redirect
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        
+        return { 
+            success: true, 
+            message: 'Logged out successfully' 
+        };
+    }
+},
     
     // Verify token
     async verifyToken() {
@@ -104,10 +159,187 @@ const authService = {
         return !!localStorage.getItem('accessToken');
     },
     
-    // Get current user
+    // Get current user from localStorage
     getCurrentUser() {
         const userStr = localStorage.getItem('user');
         return userStr ? JSON.parse(userStr) : null;
+    },
+    
+    // ============ NEW FUNCTIONS ============
+    
+    // Fetch fresh user data from server (FIX: untuk dapat data lengkap)
+    async fetchUserProfile() {
+        try {
+            const response = await api.get('/users/me');
+            const data = response.data;
+            
+            if (data.success && data.user) {
+                // Update localStorage dengan data lengkap
+                localStorage.setItem('user', JSON.stringify(data.user));
+                return data.user;
+            }
+            return null;
+        } catch (error) {
+            console.error('Fetch user profile error:', error);
+            return null;
+        }
+    },
+    
+    // Check auth status dengan fetch data terbaru
+    async checkAuthStatus() {
+        if (!this.isAuthenticated()) {
+            return { authenticated: false, user: null };
+        }
+        
+        try {
+            const verifyResponse = await this.verifyToken();
+            if (verifyResponse.success) {
+                // Fetch data user terbaru dari server
+                const freshUser = await this.fetchUserProfile();
+                return { 
+                    authenticated: true, 
+                    user: freshUser || this.getCurrentUser()
+                };
+            } else {
+                this.logout();
+                return { authenticated: false, user: null };
+            }
+        } catch (error) {
+            this.logout();
+            return { authenticated: false, user: null };
+        }
+    },
+    
+    // Log activity
+    async logActivity(action, userData = {}, details = {}) {
+        try {
+            const user = this.getCurrentUser();
+            const response = await api.post('/auth/log-activity', {
+                action: action,
+                username: user?.username || userData.username,
+                user_name: user?.full_name || userData.full_name,
+                user_agent: navigator.userAgent,
+                device_type: getDeviceType(),
+                status: 'success',
+                details: JSON.stringify({ ...details, ...userData })
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Failed to log activity:', error);
+            // Jangan throw error, biarkan proses tetap berjalan
+            return { success: false, error: 'Failed to log activity' };
+        }
+    },
+    
+    // ============ ACTIVITY LOGS ENDPOINTS ============
+    
+    // Get activity logs (semua user)
+    async getActivityLogs(params = {}) {
+        try {
+            const response = await api.get('/activity-logs', { params });
+            return response.data;
+        } catch (error) {
+            console.error('Get activity logs error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to get activity logs'
+            };
+        }
+    },
+    
+    // Get user's own activity logs
+    async getMyActivityLogs(params = {}) {
+        try {
+            const response = await api.get('/activity-logs/my', { params });
+            return response.data;
+        } catch (error) {
+            console.error('Get my activity logs error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to get activity logs'
+            };
+        }
+    },
+    
+    // Get activity log statistics
+    async getActivityStats(params = {}) {
+        try {
+            const response = await api.get('/activity-logs/stats', { params });
+            return response.data;
+        } catch (error) {
+            console.error('Get activity stats error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to get activity statistics'
+            };
+        }
+    },
+    
+    // ============ USER PROFILE ENDPOINTS ============
+    
+    // Update user profile (full_name dan username) - DIPERBAIKI
+    async updateProfile(data) {
+        try {
+            const response = await api.patch('/users/profile', data);
+            const responseData = response.data;
+            
+            if (responseData.success) {
+                // Fetch data terbaru dari server untuk pastikan data lengkap
+                if (responseData.user) {
+                    localStorage.setItem('user', JSON.stringify(responseData.user));
+                } else {
+                    // Jika server tidak return user data, fetch ulang
+                    const freshUser = await this.fetchUserProfile();
+                    if (freshUser) {
+                        localStorage.setItem('user', JSON.stringify(freshUser));
+                        responseData.user = freshUser;
+                    }
+                }
+            }
+            
+            return responseData;
+        } catch (error) {
+            console.error('Update profile error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to update profile'
+            };
+        }
+    },
+    
+    // Change password - DIPERBAIKI
+    async changePassword(data) {
+        try {
+            const response = await api.patch('/users/password', data);
+            const responseData = response.data;
+            
+            if (responseData.success) {
+                // Log activity setelah ganti password
+                await this.logActivity('password_change', {});
+            }
+            
+            return responseData;
+        } catch (error) {
+            console.error('Change password error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to change password'
+            };
+        }
+    },
+    
+    // Get user details (sudah ada di fetchUserProfile)
+    async getUserDetails() {
+        try {
+            const response = await api.get('/users/me');
+            return response.data;
+        } catch (error) {
+            console.error('Get user details error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to get user details'
+            };
+        }
     },
     
     // ============ DPK DATA ENDPOINTS ============
@@ -226,6 +458,64 @@ const authService = {
         }
     },
     
+    // ============ KOL2 DATA ENDPOINTS ============
+    
+    // Get all Kol2 data
+    async getKol2Data() {
+        try {
+            const response = await api.get('/kol2');
+            return response.data;
+        } catch (error) {
+            console.error('Get Kol2 data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to get Kol2 data'
+            };
+        }
+    },
+    
+    // Get specific period Kol2 data
+    async getKol2PeriodData(period) {
+        try {
+            const response = await api.get(`/kol2/${encodeURIComponent(period)}`);
+            return response.data;
+        } catch (error) {
+            console.error('Get Kol2 period data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to get Kol2 period data'
+            };
+        }
+    },
+    
+    // Save/update Kol2 data
+    async saveKol2Data(data) {
+        try {
+            const response = await api.post('/kol2', data);
+            return response.data;
+        } catch (error) {
+            console.error('Save Kol2 data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to save Kol2 data'
+            };
+        }
+    },
+    
+    // Delete Kol2 data
+    async deleteKol2Data(period) {
+        try {
+            const response = await api.delete(`/kol2/${encodeURIComponent(period)}`);
+            return response.data;
+        } catch (error) {
+            console.error('Delete Kol2 data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to delete Kol2 data'
+            };
+        }
+    },
+    
     // ============ DASHBOARD ============
     
     // Get dashboard data
@@ -272,30 +562,6 @@ const authService = {
         }
     },
     
-    // Refresh token (jika ada endpoint refresh-token)
-    async refreshToken() {
-        try {
-            const refreshToken = localStorage.getItem('refreshToken');
-            if (!refreshToken) {
-                throw new Error('No refresh token available');
-            }
-            const response = await api.post('/refresh-token', { refreshToken });
-            const data = response.data;
-            
-            if (data.success && data.accessToken) {
-                localStorage.setItem('accessToken', data.accessToken);
-            }
-            
-            return data;
-        } catch (error) {
-            console.error('Refresh token error:', error);
-            return {
-                success: false,
-                error: error.response?.data?.error || 'Failed to refresh token'
-            };
-        }
-    },
-    
     // ============ HELPER FUNCTIONS ============
     
     // Save user data
@@ -313,26 +579,55 @@ const authService = {
         };
     },
     
-    // Check token validity
-    async checkAuthStatus() {
-        if (!this.isAuthenticated()) {
-            return { authenticated: false, user: null };
-        }
-        
+    // ============ FUNGSI UNTUK PROFILE PAGE ============
+    
+    // Get recent activity logs with limit (UNTUK PROFILE PAGE)
+    async getRecentActivityLogs(limit = 20, page = 1) {
         try {
-            const verifyResponse = await this.verifyToken();
-            if (verifyResponse.success) {
-                return { 
-                    authenticated: true, 
-                    user: this.getCurrentUser() 
+            const params = {
+                limit,
+                page,
+                sortBy: 'created_at',
+                sortOrder: 'desc'
+            };
+            
+            const response = await this.getActivityLogs(params);
+            
+            if (response.success) {
+                return {
+                    success: true,
+                    data: response.data || [],
+                    pagination: response.pagination || {}
                 };
-            } else {
-                this.logout();
-                return { authenticated: false, user: null };
             }
+            
+            return response;
+            
         } catch (error) {
-            this.logout();
-            return { authenticated: false, user: null };
+            console.error('Get recent activity logs error:', error);
+            return {
+                success: false,
+                error: 'Failed to get recent activity logs'
+            };
+        }
+    },
+    
+    // Get today's activity summary
+    async getTodayActivitySummary() {
+        try {
+            const response = await this.getActivityStats({
+                period: 'today',
+                groupBy: 'user'
+            });
+            
+            return response;
+            
+        } catch (error) {
+            console.error('Get today activity summary error:', error);
+            return {
+                success: false,
+                error: 'Failed to get today activity summary'
+            };
         }
     }
 };
