@@ -8,16 +8,19 @@ import {
   TrendingUp,
   Banknote,
   DollarSign,
-  LineChart
+  LineChart,
+  AlertTriangle,
+  Percent
 } from 'lucide-react';
 import InputDPK from '../components/InputDPK';
 import InputPBY from '../components/InputPBY';
 import InputKol2 from '../components/InputKol2';
+import InputNPF from '../components/InputNPF';
 
 const Input = () => {
   const navigate = useNavigate();
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('dpk'); // 'dpk', 'pby', atau 'kol2'
+  const [activeTab, setActiveTab] = useState('dpk'); // 'dpk', 'pby', 'kol2', atau 'npf'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 p-4 md:p-6">
@@ -61,14 +64,14 @@ const Input = () => {
           </motion.div>
         )}
 
-        {/* Tab Navigation untuk pilih DPK, PBY, atau Kol2 */}
+        {/* Tab Navigation untuk pilih DPK, PBY, Kol2, atau NPF */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="mb-8"
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* DPK Card */}
             <div className="flex-1 bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm border border-white/20 p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center mb-4">
@@ -137,6 +140,29 @@ const Input = () => {
                 {activeTab === 'kol2' ? 'Sedang Aktif' : 'Input Kol. 2'}
               </button>
             </div>
+
+            {/* NPF Card */}
+            <div className="flex-1 bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm border border-white/20 p-4 hover:shadow-md transition-shadow">
+              <div className="flex items-center mb-4">
+                <div className="p-2 rounded-lg bg-red-50 mr-3">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">NPF</h3>
+                  <p className="text-sm text-gray-600">Non-Performing Financing</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveTab('npf')}
+                className={`w-full py-3 px-4 rounded-xl text-sm font-medium transition-all duration-300 ${
+                  activeTab === 'npf'
+                    ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {activeTab === 'npf' ? 'Sedang Aktif' : 'Input NPF'}
+              </button>
+            </div>
           </div>
         </motion.div>
 
@@ -159,7 +185,7 @@ const Input = () => {
           >
             <InputPBY onError={setError} />
           </motion.div>
-        ) : (
+        ) : activeTab === 'kol2' ? (
           <motion.div
             key="kol2"
             initial={{ opacity: 0, y: 10 }}
@@ -168,50 +194,164 @@ const Input = () => {
           >
             <InputKol2 onError={setError} />
           </motion.div>
+        ) : (
+          <motion.div
+            key="npf"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <InputNPF onError={setError} />
+          </motion.div>
         )}
 
-        {/* Info Box */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mt-8"
-        >
-          <div className="flex items-start">
-            <AlertCircle className="w-6 h-6 text-blue-600 mt-1 mr-3 flex-shrink-0" />
-            <div>
-              <h3 className="text-sm font-medium text-blue-900 mb-2">Perhatian:</h3>
-              <div className="text-sm text-blue-700 space-y-2">
-                <div>
-                  <span className="font-medium">Data DPK:</span>
-                  <ul className="ml-4 space-y-1">
-                    <li>• Input data Tabungan, Giro, dan Deposito</li>
-                    <li>• DPK, CASA, dan %CASA akan dihitung otomatis</li>
-                  </ul>
-                </div>
-                <div>
-                  <span className="font-medium">Data PBY:</span>
-                  <ul className="ml-4 space-y-1">
-                    <li>• Input data Griya, Oto, Mitraguna, dan Pensiun</li>
-                    <li>• CFG akan dihitung otomatis</li>
-                    <li>• Dengan input Cair & Run Off</li>
-                  </ul>
-                </div>
-                <div>
-                  <span className="font-medium">Data Kol. 2:</span>
-                  <ul className="ml-4 space-y-1">
-                    <li>• Input data aktual saja (tanpa Cair & Run Off)</li>
-                    <li>• Sederhana dan cepat</li>
-                    <li>• CFG, PWG, PBY dihitung otomatis</li>
-                  </ul>
-                </div>
-                <div className="text-xs text-gray-600 mt-2">
-                  <em>Pastikan periode tidak duplikat untuk menghindari bug data.</em>
-                </div>
-              </div>
-            </div>
+       {/* Info Box - Langkah Input */}
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ delay: 0.3 }}
+  className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mt-8"
+>
+  <div className="flex items-start">
+    <AlertCircle className="w-6 h-6 text-blue-600 mt-1 mr-3 flex-shrink-0" />
+    <div className="w-full">
+      <h3 className="text-sm font-medium text-blue-900 mb-6">📋 Langkah-Langkah Input Data:</h3>
+      
+      {/* Langkah untuk SEMUA Segment */}
+      <div className="space-y-4">
+        {/* Langkah 1 - UMUM */}
+        <div className="flex items-start">
+          <div className="bg-blue-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+            1
           </div>
-        </motion.div>
+          <div>
+            <h4 className="text-xs font-medium text-blue-800">Pilih Periode</h4>
+            <p className="text-xs text-blue-700 mt-0.5">
+              Pilih periode yang sudah ada dari dropdown atau buat custom periode baru dengan input Tanggal, Bulan, Tahun
+            </p>
+          </div>
+        </div>
+        
+        {/* Langkah 2 - UMUM */}
+        <div className="flex items-start">
+          <div className="bg-blue-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+            2
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-blue-800">Input Data Aktual</h4>
+            <p className="text-xs text-blue-700 mt-0.5">
+              Isi semua field data aktual sesuai dengan segment yang dipilih
+            </p>
+          </div>
+        </div>
+        
+        {/* Langkah 3 - DPK */}
+        <div className="flex items-start">
+          <div className="bg-emerald-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+            DPK
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-emerald-800">Input Data DPK</h4>
+            <p className="text-xs text-emerald-700 mt-0.5">
+              Isi Tabungan, Giro, Deposito → Sistem otomatis menghitung DPK, CASA, dan %CASA
+            </p>
+          </div>
+        </div>
+        
+        {/* Langkah 3 - PBY */}
+        <div className="flex items-start">
+          <div className="bg-blue-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+            PBY
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-blue-800">Input Data PBY</h4>
+            <p className="text-xs text-blue-700 mt-0.5">
+              Isi Griya, Oto, Mitraguna, Pensiun → Sistem otomatis menghitung CFG<br/>
+              Isi Cair & Run Off per segment → Sistem otomatis menghitung Net CFG
+            </p>
+          </div>
+        </div>
+        
+        {/* Langkah 3 - KOL.2 */}
+        <div className="flex items-start">
+          <div className="bg-purple-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+            KOL.2
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-purple-800">Input Data Kol.2</h4>
+            <p className="text-xs text-purple-700 mt-0.5">
+              Isi Griya, Oto, Mitraguna, Pensiun, Cicil Emas → Sistem otomatis menghitung CFG, PWG, dan Kol.2
+            </p>
+          </div>
+        </div>
+        
+        {/* Langkah 3 - NPF */}
+        <div className="flex items-start">
+          <div className="bg-red-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+            NPF
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-red-800">Input Data NPF</h4>
+            <p className="text-xs text-red-700 mt-0.5">
+              Isi NPF per segment (Griya, Oto, Mitraguna, Pensiun, Cicil Emas) → Sistem otomatis menghitung CFG, PWG, dan NPF
+            </p>
+          </div>
+        </div>
+        
+        {/* Langkah 4 - UMUM */}
+        <div className="flex items-start">
+          <div className="bg-blue-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+            4
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-blue-800">Input Target (DPK & PBY)</h4>
+            <p className="text-xs text-blue-700 mt-0.5">
+              Untuk DPK & PBY: Isi target per komponen → Sistem otomatis menghitung target DPK, CASA, dan CFG
+            </p>
+          </div>
+        </div>
+        
+        {/* Langkah 5 - UMUM */}
+        <div className="flex items-start">
+          <div className="bg-blue-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+            5
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-blue-800">Input Catatan (Opsional)</h4>
+            <p className="text-xs text-blue-700 mt-0.5">
+              Tambahkan catatan atau keterangan jika diperlukan untuk periode tersebut
+            </p>
+          </div>
+        </div>
+        
+        {/* Langkah 6 - UMUM */}
+        <div className="flex items-start">
+          <div className="bg-blue-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+            6
+          </div>
+          <div>
+            <h4 className="text-xs font-medium text-blue-800">Simpan Data</h4>
+            <p className="text-xs text-blue-700 mt-0.5">
+              Klik "Simpan Data" untuk menyimpan → Data akan tersimpan dan tampil di Dashboard
+            </p>
+          </div>
+        </div>
+        
+        {/* Catatan Penting */}
+        <div className="mt-6 pt-4 border-t border-blue-200">
+          <h4 className="text-xs font-medium text-blue-900 mb-2">📌 Catatan Penting:</h4>
+          <ul className="text-xs text-blue-700 space-y-1">
+            <li>• Gunakan angka tanpa titik/koma (Contoh: 350000 untuk Rp 350 Juta)</li>
+            <li>• Untuk edit data: Pilih periode yang sudah ada → Update data → Simpan</li>
+            <li>• Untuk hapus data: Pilih periode → Klik tombol Hapus</li>
+            <li>• Setelah simpan, sistem akan redirect ke Dashboard dalam 2 detik</li>
+            <li>• Pastikan periode tidak duplikat</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</motion.div>
       </div>
     </div>
   );

@@ -1845,6 +1845,327 @@ app.delete('/api/kol2/:period', authenticateToken, async (req, res) => {
   }
 });
 
+// ============ NPF ENDPOINTS ============
+
+// 28. GET ALL NPF DATA
+app.get('/api/npf', authenticateToken, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT * FROM npf_data 
+       ORDER BY 
+         CASE 
+           WHEN period LIKE '%Dec%' THEN 1
+           WHEN period LIKE '%Jan%' THEN 2
+           WHEN period LIKE '%Feb%' THEN 3
+           WHEN period LIKE '%Mar%' THEN 4
+           WHEN period LIKE '%Apr%' THEN 5
+           WHEN period LIKE '%May%' THEN 6
+           WHEN period LIKE '%Jun%' THEN 7
+           WHEN period LIKE '%Jul%' THEN 8
+           WHEN period LIKE '%Aug%' THEN 9
+           WHEN period LIKE '%Sep%' THEN 10
+           WHEN period LIKE '%Oct%' THEN 11
+           WHEN period LIKE '%Nov%' THEN 12
+           ELSE 13
+         END DESC`
+    );
+    
+    res.json({
+      success: true,
+      data: rows
+    });
+    
+  } catch (error) {
+    console.error('Get NPF data error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to get NPF data' 
+    });
+  }
+});
+
+// 29. GET SPECIFIC PERIOD NPF DATA
+app.get('/api/npf/:period', authenticateToken, async (req, res) => {
+  try {
+    const { period } = req.params;
+    
+    const [rows] = await pool.execute(
+      `SELECT * FROM npf_data WHERE period = ?`,
+      [period]
+    );
+    
+    if (rows.length === 0) {
+      return res.json({
+        success: true,
+        data: null,
+        message: 'No NPF data found for this period'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: rows[0]
+    });
+    
+  } catch (error) {
+    console.error('Get NPF period error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Server error' 
+    });
+  }
+});
+
+// 30. CREATE/UPDATE NPF DATA
+app.post('/api/npf', authenticateToken, async (req, res) => {
+  try {
+    const {
+      period,
+      date,
+      griya,
+      oto,
+      mitraguna,
+      pensiun,
+      cicil_emas,
+      cfg,
+      pwg,
+      npf,
+      notes
+    } = req.body;
+    
+    console.log('📥 Received NPF data:');
+    console.log(JSON.stringify(req.body, null, 2));
+    
+    // Parse data
+    const parseFloatOrZero = (val) => {
+      if (val === undefined || val === null || val === '' || val === 'null') return 0;
+      const parsed = parseFloat(val);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+    
+    const griyaValue = parseFloatOrZero(griya);
+    const otoValue = parseFloatOrZero(oto);
+    const mitragunaValue = parseFloatOrZero(mitraguna);
+    const pensiunValue = parseFloatOrZero(pensiun);
+    const cicilEmasValue = parseFloatOrZero(cicil_emas);
+    
+    // Auto-calculate jika tidak dikirim
+    const cfgValue = parseFloatOrZero(cfg !== undefined ? cfg : (griyaValue + otoValue + mitragunaValue + pensiunValue));
+    const pwgValue = parseFloatOrZero(pwg !== undefined ? pwg : cicilEmasValue);
+    const npfValue = parseFloatOrZero(npf !== undefined ? npf : (cfgValue + pwgValue));
+    
+    // Format date
+    let formattedDate = null;
+    if (date && date !== 'null') {
+      try {
+        if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          formattedDate = date;
+        } else if (date.match(/^\d{2}-\w{3}-\d{4}$/)) {
+          const parts = date.split('-');
+          const months = {
+            'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+            'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+            'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+          };
+          const day = parts[0];
+          const month = months[parts[1]];
+          const year = parts[2];
+          formattedDate = `${year}-${month}-${day}`;
+        }
+      } catch (err) {
+        console.log(`⚠️ Error parsing date:`, err.message);
+      }
+    }
+    
+    console.log('✅ NPF Data parsed successfully');
+    console.log('📊 Values:', {
+      griya: griyaValue,
+      oto: otoValue,
+      mitraguna: mitragunaValue,
+      pensiun: pensiunValue,
+      cicil_emas: cicilEmasValue,
+      cfg: cfgValue,
+      pwg: pwgValue,
+      npf: npfValue
+    });
+    
+    // Check if data already exists
+    const [existing] = await pool.execute(
+      'SELECT id FROM npf_data WHERE period = ?',
+      [period]
+    );
+    
+    let message;
+    let query;
+    
+    if (existing.length > 0) {
+      // UPDATE EXISTING DATA
+      query = `
+        UPDATE npf_data SET 
+          date = ?,
+          griya = ?, 
+          oto = ?, 
+          mitraguna = ?, 
+          pensiun = ?, 
+          cicil_emas = ?,
+          cfg = ?, 
+          pwg = ?, 
+          npf = ?,
+          notes = ?, 
+          updated_at = CURRENT_TIMESTAMP,
+          created_by = ?
+        WHERE period = ?
+      `;
+      
+      const params = [
+        formattedDate,
+        griyaValue, 
+        otoValue, 
+        mitragunaValue, 
+        pensiunValue, 
+        cicilEmasValue,
+        cfgValue, 
+        pwgValue, 
+        npfValue,
+        notes && notes !== 'null' ? notes : null,
+        req.user.username || 'admin',
+        period
+      ];
+      
+      console.log(`📝 UPDATE NPF query`);
+      await pool.execute(query, params);
+      message = 'Data NPF berhasil diupdate';
+      
+      // Log activity - update_npf
+      await logDataActivity('update_npf', req);
+      
+    } else {
+      // INSERT NEW DATA
+      query = `
+        INSERT INTO npf_data (
+          period, 
+          date,
+          branch_id, 
+          branch_name, 
+          area,
+          griya, 
+          oto, 
+          mitraguna, 
+          pensiun, 
+          cicil_emas,
+          cfg, 
+          pwg, 
+          npf,
+          notes, 
+          created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      
+      const params = [
+        period, 
+        formattedDate,
+        'KCP-TEMPO-001', 
+        'KCP Jakarta Tempo Pavillion 2', 
+        'AREA JAKARTA SAHARJO',
+        griyaValue, 
+        otoValue, 
+        mitragunaValue, 
+        pensiunValue, 
+        cicilEmasValue,
+        cfgValue, 
+        pwgValue, 
+        npfValue,
+        notes && notes !== 'null' ? notes : null,
+        req.user.username || 'admin'
+      ];
+      
+      console.log(`➕ INSERT NPF query with ${params.length} params`);
+      console.log('➕ Params:', params);
+      
+      await pool.execute(query, params);
+      message = 'Data NPF berhasil disimpan';
+      
+      // Log activity - create_npf
+      await logDataActivity('create_npf', req);
+    }
+    
+    // Get saved data
+    const [savedData] = await pool.execute(
+      'SELECT * FROM npf_data WHERE period = ?',
+      [period]
+    );
+    
+    console.log('✅ NPF data saved successfully!');
+    
+    res.json({
+      success: true,
+      message,
+      data: savedData[0] || null
+    });
+    
+  } catch (error) {
+    console.error('❌ Save NPF error:', error.message);
+    console.error('🔍 Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage,
+      sql: error.sql
+    });
+    
+    let errorMessage = 'Gagal menyimpan data NPF';
+    let statusCode = 500;
+    
+    if (error.code === 'ER_DUP_ENTRY') {
+      statusCode = 409;
+      errorMessage = 'Data untuk periode ini sudah ada';
+    } else if (error.sqlMessage) {
+      errorMessage = `Database error: ${error.sqlMessage}`;
+    }
+    
+    res.status(statusCode).json({
+      success: false,
+      error: errorMessage,
+      details: error.message
+    });
+  }
+});
+
+// 31. DELETE NPF DATA
+app.delete('/api/npf/:period', authenticateToken, async (req, res) => {
+  try {
+    const { period } = req.params;
+    
+    const [result] = await pool.execute(
+      'DELETE FROM npf_data WHERE period = ?',
+      [period]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'NPF data not found' 
+      });
+    }
+    
+    // Log activity - delete_npf
+    await logDataActivity('delete_npf', req);
+    
+    res.json({
+      success: true,
+      message: 'Data NPF deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('Delete NPF error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Server error' 
+    });
+  }
+});
+
 // ============ HELPER FUNCTIONS ============
 
 // Helper function untuk log activity ketika ada perubahan data

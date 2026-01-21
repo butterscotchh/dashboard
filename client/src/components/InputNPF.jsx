@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import authService from '../services/auth';
 
-const InputKol2 = ({ onError }) => {
+const InputNPF = ({ onError }) => {
   // State untuk periode custom dengan TAHUN
   const [customDate, setCustomDate] = useState({
     day: '01',
@@ -55,7 +55,7 @@ const InputKol2 = ({ onError }) => {
 
   // Load data saat komponen mount
   useEffect(() => {
-    loadAllKol2Data();
+    loadAllNPFData();
   }, []);
 
   // Update current data berdasarkan periode yang dipilih
@@ -126,11 +126,11 @@ const InputKol2 = ({ onError }) => {
     });
   };
 
-  const loadAllKol2Data = async () => {
+  const loadAllNPFData = async () => {
     try {
-      console.log('Loading Kol2 data...');
-      const response = await authService.getKol2Data();
-      console.log('Kol2 data response:', response);
+      console.log('Loading NPF data...');
+      const response = await authService.getNPFData();
+      console.log('NPF data response:', response);
       
       if (response.success && response.data) {
         const formattedData = {};
@@ -153,7 +153,7 @@ const InputKol2 = ({ onError }) => {
             // Auto calculated
             CFG: item.cfg?.toString() || '',
             PWG: item.pwg?.toString() || '',
-            kol2: item.kol2?.toString() || '',
+            npf: item.npf?.toString() || '',
             
             notes: item.notes || '',
             date: item.date || null
@@ -166,13 +166,13 @@ const InputKol2 = ({ onError }) => {
         setAllPeriodsData(formattedData);
         setPeriodsList(sortedPeriods);
         
-        console.log('Formatted Kol2 data:', formattedData);
+        console.log('Formatted NPF data:', formattedData);
       } else {
-        console.log('No Kol2 data found or empty response');
-        setDebugInfo(response.error || 'Tidak ada data Kol2');
+        console.log('No NPF data found or empty response');
+        setDebugInfo(response.error || 'Tidak ada data NPF');
       }
     } catch (error) {
-      console.error('Error loading Kol2 data:', error);
+      console.error('Error loading NPF data:', error);
       setDebugInfo(`Catch error: ${error.message}`);
       onError(`Gagal memuat data: ${error.message}`);
     }
@@ -180,9 +180,9 @@ const InputKol2 = ({ onError }) => {
 
   const loadPeriodData = async (period) => {
     try {
-      console.log(`Loading Kol2 period data for: ${period}`);
-      const response = await authService.getKol2PeriodData(period);
-      console.log('Kol2 Period data response:', response);
+      console.log(`Loading NPF period data for: ${period}`);
+      const response = await authService.getNPFPeriodData(period);
+      console.log('NPF Period data response:', response);
       
       if (response.success && response.data) {
         const data = response.data;
@@ -199,7 +199,7 @@ const InputKol2 = ({ onError }) => {
         const parsedDate = parsePeriodString(period);
         setCustomDate(parsedDate);
       } else {
-        console.log('No Kol2 data found for period:', period);
+        console.log('No NPF data found for period:', period);
         resetForm();
         
         const parsedDate = parsePeriodString(period);
@@ -208,23 +208,23 @@ const InputKol2 = ({ onError }) => {
         onError(`Data untuk periode ${period} tidak ditemukan`);
       }
     } catch (error) {
-      console.error('Error loading Kol2 period data:', error);
-      setDebugInfo(`Kol2 Period data error: ${error.message}`);
+      console.error('Error loading NPF period data:', error);
+      setDebugInfo(`NPF Period data error: ${error.message}`);
       onError(`Gagal memuat data periode: ${error.message}`);
     }
   };
 
   const handleDeletePeriod = async (period) => {
-    if (!window.confirm(`Yakin ingin menghapus data Kol2 untuk periode ${period}?`)) {
+    if (!window.confirm(`Yakin ingin menghapus data NPF untuk periode ${period}?`)) {
       return;
     }
     
     try {
       setLoading(true);
-      console.log(`Deleting Kol2 period: ${period}`);
+      console.log(`Deleting NPF period: ${period}`);
       
-      const response = await authService.deleteKol2Data(period);
-      console.log('Delete Kol2 response:', response);
+      const response = await authService.deleteNPFData(period);
+      console.log('Delete NPF response:', response);
       
       if (response.success) {
         const updatedData = { ...allPeriodsData };
@@ -239,14 +239,14 @@ const InputKol2 = ({ onError }) => {
           resetForm();
         }
         
-        setDebugInfo(`✅ Data Kol2 periode ${period} berhasil dihapus`);
+        setDebugInfo(`✅ Data NPF periode ${period} berhasil dihapus`);
         onError('');
       } else {
-        onError(`❌ Gagal menghapus data Kol2: ${response.error || 'Unknown error'}`);
+        onError(`❌ Gagal menghapus data NPF: ${response.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Delete Kol2 error:', error);
-      onError('❌ Gagal menghapus data Kol2. Silakan coba lagi.');
+      console.error('Delete NPF error:', error);
+      onError('❌ Gagal menghapus data NPF. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -284,8 +284,8 @@ const InputKol2 = ({ onError }) => {
     return parseNumber(currentData.CicilEmas);
   };
 
-  // 3. KOL2 = CFG + PWG (AUTO-CALCULATED)
-  const calculateKOL2 = () => {
+  // 3. NPF = CFG + PWG (AUTO-CALCULATED)
+  const calculateNPF = () => {
     return calculateCFG() + calculatePWG();
   };
 
@@ -360,7 +360,7 @@ const InputKol2 = ({ onError }) => {
       // AUTO-CALCULATED
       const cfgValue = griyaValue + otoValue + mitragunaValue + pensiunValue;
       const pwgValue = cicilEmasValue;
-      const kol2Value = cfgValue + pwgValue;
+      const npfValue = cfgValue + pwgValue;
 
       let formattedDate = null;
       if (selectedPeriod === 'custom') {
@@ -381,18 +381,18 @@ const InputKol2 = ({ onError }) => {
         // Auto calculated
         cfg: cfgValue,
         pwg: pwgValue,
-        kol2: kol2Value,
+        npf: npfValue,
         
         notes: notes || null
       };
 
-      console.log('=== KOL2 DATA TO SAVE ===', dataToSave);
+      console.log('=== NPF DATA TO SAVE ===', dataToSave);
 
-      const response = await authService.saveKol2Data(dataToSave);
+      const response = await authService.saveNPFData(dataToSave);
       
       if (response.success) {
-        console.log('✅ Data Kol2 berhasil disimpan');
-        setDebugInfo(`✅ Data Kol2 untuk periode ${periodKey} berhasil disimpan!`);
+        console.log('✅ Data NPF berhasil disimpan');
+        setDebugInfo(`✅ Data NPF untuk periode ${periodKey} berhasil disimpan!`);
         
         // Update local state
         if (selectedPeriod === 'custom' && !periodsList.includes(periodKey)) {
@@ -406,7 +406,7 @@ const InputKol2 = ({ onError }) => {
           ...currentData,
           CFG: cfgValue.toString(),
           PWG: pwgValue.toString(),
-          KOL2: kol2Value.toString(),
+          NPF: npfValue.toString(),
           notes: notes,
           date: formattedDate
         };
@@ -419,15 +419,15 @@ const InputKol2 = ({ onError }) => {
           window.location.href = '/dashboard';
         }, 2000);
       } else {
-        console.error('❌ Save Kol2 failed:', response);
-        const errorMsg = response.error || response.message || 'Gagal menyimpan data Kol2';
+        console.error('❌ Save NPF failed:', response);
+        const errorMsg = response.error || response.message || 'Gagal menyimpan data NPF';
         onError(`❌ Error: ${errorMsg}`);
         setDebugInfo(`❌ Server error: ${JSON.stringify(response, null, 2)}`);
       }
 
     } catch (err) {
       console.error('❌ Catch error:', err);
-      let errorMsg = 'Gagal menyimpan data Kol2. Silakan coba lagi.';
+      let errorMsg = 'Gagal menyimpan data NPF. Silakan coba lagi.';
       
       if (err.response) {
         errorMsg = `Server error: ${err.response.status}`;
@@ -507,14 +507,14 @@ const InputKol2 = ({ onError }) => {
     return (
       <div className="space-y-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          Input Data Aktual Kol. 2 untuk Periode: {selectedPeriod === 'custom' ? getCustomPeriodLabel() : selectedPeriod}
+          Input Data Aktual NPF untuk Periode: {selectedPeriod === 'custom' ? getCustomPeriodLabel() : selectedPeriod}
         </h3>
         
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4">
           <div className="flex items-start">
             <Info className="w-5 h-5 text-emerald-600 mt-0.5 mr-2 flex-shrink-0" />
             <div>
-              <p className="text-sm font-medium text-emerald-800">Cara Input Kol. 2:</p>
+              <p className="text-sm font-medium text-emerald-800">Cara Input NPF:</p>
               <p className="text-xs text-emerald-700 mt-1">
                 Masukkan angka tanpa titik/koma. Contoh: 350000 (untuk Rp 350 Juta)
               </p>
@@ -626,12 +626,12 @@ const InputKol2 = ({ onError }) => {
             </p>
           </div>
 
-          {/* KOL2 */}
+          {/* NPF */}
           <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
             <label className="block text-sm font-medium text-emerald-800 mb-2">
               <span className="flex items-center">
                 <TrendingUp className="w-5 h-5 mr-2" />
-                KOL2 (Auto)
+                NPF (Auto)
               </span>
             </label>
             <div className="relative">
@@ -640,13 +640,13 @@ const InputKol2 = ({ onError }) => {
               </span>
               <input
                 type="text"
-                value={formatDisplayNumber(calculateKOL2())}
+                value={formatDisplayNumber(calculateNPF())}
                 readOnly
                 className="pl-10 pr-3 py-3 w-full bg-white border border-emerald-300 rounded-lg text-emerald-700 font-medium"
               />
             </div>
             <p className="text-xs text-emerald-600 mt-2">
-              KOL2 = CFG + PWG
+              NPF = CFG + PWG
             </p>
           </div>
         </div>
@@ -683,7 +683,7 @@ const InputKol2 = ({ onError }) => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center">
               <Calendar className="w-6 h-6 mr-3 text-emerald-500" />
-              <h2 className="text-xl font-semibold text-gray-900">Pilih Periode Kol. 2</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Pilih Periode NPF</h2>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
@@ -812,4 +812,4 @@ const InputKol2 = ({ onError }) => {
   );
 };
 
-export default InputKol2;
+export default InputNPF;
