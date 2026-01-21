@@ -758,7 +758,7 @@ const InputDPK = ({ onError }) => {
             <div>
               <p className="text-sm font-medium text-blue-800">Informasi Target</p>
               <p className="text-xs text-blue-700 mt-1">
-                Input Growth Target pada data yang paling baru saja.
+                Masukkan Growth Target pada data yang paling baru saja.
               </p>
             </div>
           </div>
@@ -979,7 +979,7 @@ const InputDPK = ({ onError }) => {
           
           {/* Info tentang periode */}
           <div className="mt-4 text-sm text-gray-600">
-            <h3 className="text-sm font-medium text-blue-900 mb-2">Jika terdapat 2 tabel yang sama periode bulan dan tahunnya, bedakan di tanggalnya agar tidak terjadi bug.</h3>
+            <h3 className="text-sm font-medium text-blue-900 mb-2">Jika terdapat 2 tabel duplikat pada bulan dan tahunnya, bedakan di tanggalnya agar tidak terjadi salah kalkulasi.</h3>
           </div>
         </div>
 

@@ -73,58 +73,58 @@ const authService = {
     },
     
     // Logout - BEST SOLUTION (Balance UX & Data Integrity)
-async logout() {
-    try {
-        const user = this.getCurrentUser();
-        
-        // 1. LOG ACTIVITY DI BACKGROUND (jangan tunggu)
-        this.logActivity('logout', { username: user?.username })
-            .catch(err => console.warn('Background activity log failed:', err));
-        
-        // 2. KIRIM LOGOUT REQUEST DENGAN TIMEOUT (max 2 detik)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        
+    async logout() {
         try {
-            await api.post('/logout', {}, { signal: controller.signal });
-        } catch (apiError) {
-            if (apiError.name === 'AbortError') {
-                console.log('Logout API timeout, proceeding anyway');
-            } else {
-                console.warn('Logout API error:', apiError);
+            const user = this.getCurrentUser();
+            
+            // 1. LOG ACTIVITY DI BACKGROUND (jangan tunggu)
+            this.logActivity('logout', { username: user?.username })
+                .catch(err => console.warn('Background activity log failed:', err));
+            
+            // 2. KIRIM LOGOUT REQUEST DENGAN TIMEOUT (max 2 detik)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            
+            try {
+                await api.post('/logout', {}, { signal: controller.signal });
+            } catch (apiError) {
+                if (apiError.name === 'AbortError') {
+                    console.log('Logout API timeout, proceeding anyway');
+                } else {
+                    console.warn('Logout API error:', apiError);
+                }
+            } finally {
+                clearTimeout(timeoutId);
             }
-        } finally {
-            clearTimeout(timeoutId);
-        }
-        
-        // 3. HAPUS DATA LOKAL
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('user');
-        
-        // 4. REDIRECT CEPAT
-        setTimeout(() => {
+            
+            // 3. HAPUS DATA LOKAL
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('user');
+            
+            // 4. REDIRECT CEPAT
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 50); // Delay kecil untuk smooth transition
+            
+            return { 
+                success: true, 
+                message: 'Logged out successfully' 
+            };
+            
+        } catch (error) {
+            console.error('Unexpected logout error:', error);
+            
+            // FALLBACK: Pastikan data dihapus dan redirect
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('user');
             window.location.href = '/login';
-        }, 50); // Delay kecil untuk smooth transition
-        
-        return { 
-            success: true, 
-            message: 'Logged out successfully' 
-        };
-        
-    } catch (error) {
-        console.error('Unexpected logout error:', error);
-        
-        // FALLBACK: Pastikan data dihapus dan redirect
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-        
-        return { 
-            success: true, 
-            message: 'Logged out successfully' 
-        };
-    }
-},
+            
+            return { 
+                success: true, 
+                message: 'Logged out successfully' 
+            };
+        }
+    },
     
     // Verify token
     async verifyToken() {
@@ -512,6 +512,64 @@ async logout() {
             return {
                 success: false,
                 error: error.response?.data?.error || 'Failed to delete Kol2 data'
+            };
+        }
+    },
+
+    // ============ NPF DATA ENDPOINTS ============
+    
+    // Get all NPF data
+    async getNPFData() {
+        try {
+            const response = await api.get('/npf');
+            return response.data;
+        } catch (error) {
+            console.error('Get NPF data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to get NPF data'
+            };
+        }
+    },
+    
+    // Get specific period NPF data
+    async getNPFPeriodData(period) {
+        try {
+            const response = await api.get(`/npf/${encodeURIComponent(period)}`);
+            return response.data;
+        } catch (error) {
+            console.error('Get NPF period data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to get NPF period data'
+            };
+        }
+    },
+    
+    // Save/update NPF data
+    async saveNPFData(data) {
+        try {
+            const response = await api.post('/npf', data);
+            return response.data;
+        } catch (error) {
+            console.error('Save NPF data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to save NPF data'
+            };
+        }
+    },
+    
+    // Delete NPF data
+    async deleteNPFData(period) {
+        try {
+            const response = await api.delete(`/npf/${encodeURIComponent(period)}`);
+            return response.data;
+        } catch (error) {
+            console.error('Delete NPF data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to delete NPF data'
             };
         }
     },
