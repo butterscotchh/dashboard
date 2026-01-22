@@ -215,7 +215,7 @@ const Input = () => {
   <div className="flex items-start">
     <AlertCircle className="w-6 h-6 text-blue-600 mt-1 mr-3 flex-shrink-0" />
     <div className="w-full">
-      <h3 className="text-sm font-medium text-blue-900 mb-6">📋 Langkah-Langkah Input Data:</h3>
+      <h3 className="text-sm font-medium text-blue-900 mb-6">Langkah-Langkah Input Data:</h3>
       
       {/* Langkah untuk SEMUA Segment */}
       <div className="space-y-4">
@@ -339,7 +339,7 @@ const Input = () => {
         
         {/* Catatan Penting */}
         <div className="mt-6 pt-4 border-t border-blue-200">
-          <h4 className="text-xs font-medium text-blue-900 mb-2">📌 Catatan Penting:</h4>
+          <h4 className="text-xs font-medium text-blue-900 mb-2">Catatan Penting:</h4>
           <ul className="text-xs text-blue-700 space-y-1">
             <li>• Gunakan angka tanpa titik/koma (Contoh: 350000 untuk Rp 350 Juta)</li>
             <li>• Untuk edit data: Pilih periode yang sudah ada → Update data → Simpan</li>
