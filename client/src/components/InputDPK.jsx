@@ -550,6 +550,9 @@ const InputDPK = ({ onError }) => {
               <p className="text-xs text-emerald-700 mt-1">
                 Masukkan angka langsung tanpa tanda titik atau koma. Contoh: 350000 (untuk Rp 350 Juta)
               </p>
+              <p className="text-xs md:text-sm text-emerald-700 mt-1">
+                <strong>Note:</strong> Data Detail Tabungan dimasukkan pada data yang paling baru saja
+              </p>
             </div>
           </div>
         </div>

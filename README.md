@@ -1,2 +1,3 @@
 # dashboard
 solo project
+magang
