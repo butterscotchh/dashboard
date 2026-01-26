@@ -128,9 +128,7 @@ const InputNPF = ({ onError }) => {
 
   const loadAllNPFData = async () => {
     try {
-      console.log('Loading NPF data...');
       const response = await authService.getNPFData();
-      console.log('NPF data response:', response);
       
       if (response.success && response.data) {
         const formattedData = {};
@@ -166,9 +164,7 @@ const InputNPF = ({ onError }) => {
         setAllPeriodsData(formattedData);
         setPeriodsList(sortedPeriods);
         
-        console.log('Formatted NPF data:', formattedData);
       } else {
-        console.log('No NPF data found or empty response');
         setDebugInfo(response.error || 'Tidak ada data NPF');
       }
     } catch (error) {
@@ -180,9 +176,7 @@ const InputNPF = ({ onError }) => {
 
   const loadPeriodData = async (period) => {
     try {
-      console.log(`Loading NPF period data for: ${period}`);
       const response = await authService.getNPFPeriodData(period);
-      console.log('NPF Period data response:', response);
       
       if (response.success && response.data) {
         const data = response.data;
@@ -199,7 +193,6 @@ const InputNPF = ({ onError }) => {
         const parsedDate = parsePeriodString(period);
         setCustomDate(parsedDate);
       } else {
-        console.log('No NPF data found for period:', period);
         resetForm();
         
         const parsedDate = parsePeriodString(period);
@@ -221,10 +214,8 @@ const InputNPF = ({ onError }) => {
     
     try {
       setLoading(true);
-      console.log(`Deleting NPF period: ${period}`);
       
       const response = await authService.deleteNPFData(period);
-      console.log('Delete NPF response:', response);
       
       if (response.success) {
         const updatedData = { ...allPeriodsData };
@@ -261,14 +252,12 @@ const InputNPF = ({ onError }) => {
     }));
   };
 
-  // ========== AUTO-CALCULATED FUNCTIONS ==========
-  
   // Helper untuk parse angka
- const parseNumber = (value) => {
-  if (!value && value !== '0') return 0; // Sudah mengembalikan 0 untuk null/undefined
-  const cleaned = value.toString().replace(',', '.');
-  return parseFloat(cleaned) || 0;
-};
+  const parseNumber = (value) => {
+    if (!value && value !== '0') return 0;
+    const cleaned = value.toString().replace(',', '.');
+    return parseFloat(cleaned) || 0;
+  };
 
   // 1. CFG = Griya + Oto + Mitraguna + Pensiun (AUTO-CALCULATED)
   const calculateCFG = () => {
@@ -337,19 +326,9 @@ const InputNPF = ({ onError }) => {
       }
     }
 
-    // Validasi data aktual
-    const requiredFields = ['Griya', 'Oto', 'Mitraguna', 'Pensiun', 'CicilEmas'];
-
     try {
       const periodKey = selectedPeriod === 'custom' ? getCustomPeriodLabel() : selectedPeriod;
       
-      const parseNumber = (value) => {
-        if (!value && value !== '0') return 0;
-        const cleaned = value.toString().replace(',', '.');
-        const parsed = parseFloat(cleaned);
-        return isNaN(parsed) ? 0 : parsed;
-      };
-
       // Data aktual
       const griyaValue = parseNumber(currentData.Griya);
       const otoValue = parseNumber(currentData.Oto);
@@ -386,12 +365,9 @@ const InputNPF = ({ onError }) => {
         notes: notes || null
       };
 
-      console.log('=== NPF DATA TO SAVE ===', dataToSave);
-
       const response = await authService.saveNPFData(dataToSave);
       
       if (response.success) {
-        console.log('✅ Data NPF berhasil disimpan');
         setDebugInfo(`✅ Data NPF untuk periode ${periodKey} berhasil disimpan!`);
         
         // Update local state
@@ -419,21 +395,15 @@ const InputNPF = ({ onError }) => {
           window.location.href = '/dashboard';
         }, 2000);
       } else {
-        console.error('❌ Save NPF failed:', response);
         const errorMsg = response.error || response.message || 'Gagal menyimpan data NPF';
         onError(`❌ Error: ${errorMsg}`);
-        setDebugInfo(`❌ Server error: ${JSON.stringify(response, null, 2)}`);
       }
 
     } catch (err) {
-      console.error('❌ Catch error:', err);
       let errorMsg = 'Gagal menyimpan data NPF. Silakan coba lagi.';
       
       if (err.response) {
         errorMsg = `Server error: ${err.response.status}`;
-        if (err.response.data) {
-          errorMsg += ` - ${JSON.stringify(err.response.data)}`;
-        }
       } else if (err.request) {
         errorMsg = 'Tidak ada response dari server. Periksa koneksi backend.';
       } else if (err.message) {
@@ -441,7 +411,6 @@ const InputNPF = ({ onError }) => {
       }
       
       onError(`❌ ${errorMsg}`);
-      setDebugInfo(`❌ Error details: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -480,41 +449,41 @@ const InputNPF = ({ onError }) => {
       {
         field: 'Griya',
         label: 'Griya',
-        icon: <Home className="w-5 h-5" />,
+        icon: <Home className="w-4 h-4 md:w-5 md:h-5" />,
       },
       {
         field: 'Oto',
         label: 'Oto',
-        icon: <Car className="w-5 h-5" />,
+        icon: <Car className="w-4 h-4 md:w-5 md:h-5" />,
       },
       {
         field: 'Mitraguna',
         label: 'Mitraguna',
-        icon: <Briefcase className="w-5 h-5" />,
+        icon: <Briefcase className="w-4 h-4 md:w-5 md:h-5" />,
       },
       {
         field: 'Pensiun',
         label: 'Pensiun',
-        icon: <Users className="w-5 h-5" />,
+        icon: <Users className="w-4 h-4 md:w-5 md:h-5" />,
       },
       {
         field: 'CicilEmas',
         label: 'Cicil Emas (PWG)',
-        icon: <Gem className="w-5 h-5" />,
+        icon: <Gem className="w-4 h-4 md:w-5 md:h-5" />,
       }
     ];
 
     return (
-      <div className="space-y-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+      <div className="space-y-4 md:space-y-6">
+        <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-4">
           Input Data Aktual NPF untuk Periode: {selectedPeriod === 'custom' ? getCustomPeriodLabel() : selectedPeriod}
         </h3>
         
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg md:rounded-xl p-3 md:p-4 mb-4">
           <div className="flex items-start">
-            <Info className="w-5 h-5 text-emerald-600 mt-0.5 mr-2 flex-shrink-0" />
+            <Info className="w-4 h-4 md:w-5 md:h-5 text-emerald-600 mt-0.5 mr-2 flex-shrink-0" />
             <div>
-              <p className="text-sm font-medium text-emerald-800">Cara Input NPF:</p>
+              <p className="text-xs md:text-sm font-medium text-emerald-800">Cara Input NPF:</p>
               <p className="text-xs text-emerald-700 mt-1">
                 Masukkan angka tanpa titik/koma. Contoh: 350000 (untuk Rp 350 Juta)
               </p>
@@ -525,11 +494,11 @@ const InputNPF = ({ onError }) => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {segments.map((segment, index) => (
-            <div key={segment.field} className="bg-white border border-gray-200 rounded-lg p-5">
-              <div className="flex items-center mb-4">
-                <div className={`p-2 rounded-lg mr-3 ${
+            <div key={segment.field} className="bg-white border border-gray-200 rounded-lg p-3 md:p-5">
+              <div className="flex items-center mb-3 md:mb-4">
+                <div className={`p-1.5 md:p-2 rounded-lg mr-2 md:mr-3 ${
                   index === 0 ? 'bg-blue-50' :
                   index === 1 ? 'bg-green-50' :
                   index === 2 ? 'bg-purple-50' :
@@ -547,18 +516,18 @@ const InputNPF = ({ onError }) => {
                   </div>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">{segment.label}</h4>
+                  <h4 className="text-xs md:text-sm font-medium text-gray-900">{segment.label}</h4>
                   <p className="text-xs text-gray-500">Segment Pembiayaan</p>
                 </div>
               </div>
               
-              <div className="space-y-4">
-                <div className="space-y-2">
+              <div className="space-y-3 md:space-y-4">
+                <div className="space-y-1 md:space-y-2">
                   <label className="block text-xs font-medium text-gray-600">
                     {segment.label} (Rp. Juta)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-xs md:text-sm">
                       Rp
                     </span>
                     <input
@@ -566,7 +535,7 @@ const InputNPF = ({ onError }) => {
                       value={currentData[segment.field] || ''}
                       onChange={(e) => handleInputChange(segment.field, e.target.value)}
                       placeholder={`Contoh: ${getPlaceholderValue(segment.field)}`}
-                      className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition duration-200"
+                      className="pl-8 md:pl-10 pr-3 py-2 text-sm w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition duration-200"
                       disabled={loading}
                     />
                   </div>
@@ -577,91 +546,91 @@ const InputNPF = ({ onError }) => {
         </div>
 
         {/* AUTO-CALCULATED RESULTS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mt-4 md:mt-6">
           {/* CFG */}
-          <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
-            <label className="block text-sm font-medium text-blue-800 mb-2">
+          <div className="bg-blue-50 p-3 md:p-4 rounded-lg md:rounded-xl border border-blue-200">
+            <label className="block text-xs md:text-sm font-medium text-blue-800 mb-2">
               <span className="flex items-center">
-                <DollarSign className="w-5 h-5 mr-2" />
+                <DollarSign className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" />
                 CFG (Auto)
               </span>
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-600">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-600 text-xs md:text-sm">
                 Rp
               </span>
               <input
                 type="text"
                 value={formatDisplayNumber(calculateCFG())}
                 readOnly
-                className="pl-10 pr-3 py-3 w-full bg-white border border-blue-300 rounded-lg text-blue-700 font-medium"
+                className="pl-8 md:pl-10 pr-3 py-2 md:py-3 text-sm w-full bg-white border border-blue-300 rounded-lg text-blue-700 font-medium"
               />
             </div>
-            <p className="text-xs text-blue-600 mt-2">
+            <p className="text-xs text-blue-600 mt-1 md:mt-2">
               CFG = Σ(Griya, Oto, Mitraguna, Pensiun)
             </p>
           </div>
 
           {/* PWG */}
-          <div className="bg-pink-50 p-4 rounded-xl border border-pink-200">
-            <label className="block text-sm font-medium text-pink-800 mb-2">
+          <div className="bg-pink-50 p-3 md:p-4 rounded-lg md:rounded-xl border border-pink-200">
+            <label className="block text-xs md:text-sm font-medium text-pink-800 mb-2">
               <span className="flex items-center">
-                <Gem className="w-5 h-5 mr-2" />
+                <Gem className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" />
                 PWG (Auto)
               </span>
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pink-600">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pink-600 text-xs md:text-sm">
                 Rp
               </span>
               <input
                 type="text"
                 value={formatDisplayNumber(calculatePWG())}
                 readOnly
-                className="pl-10 pr-3 py-3 w-full bg-white border border-pink-300 rounded-lg text-pink-700 font-medium"
+                className="pl-8 md:pl-10 pr-3 py-2 md:py-3 text-sm w-full bg-white border border-pink-300 rounded-lg text-pink-700 font-medium"
               />
             </div>
-            <p className="text-xs text-pink-600 mt-2">
+            <p className="text-xs text-pink-600 mt-1 md:mt-2">
               PWG = Cicil Emas
             </p>
           </div>
 
           {/* NPF */}
-          <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
-            <label className="block text-sm font-medium text-emerald-800 mb-2">
+          <div className="bg-emerald-50 p-3 md:p-4 rounded-lg md:rounded-xl border border-emerald-200">
+            <label className="block text-xs md:text-sm font-medium text-emerald-800 mb-2">
               <span className="flex items-center">
-                <TrendingUp className="w-5 h-5 mr-2" />
+                <TrendingUp className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" />
                 NPF (Auto)
               </span>
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-emerald-600">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-emerald-600 text-xs md:text-sm">
                 Rp
               </span>
               <input
                 type="text"
                 value={formatDisplayNumber(calculateNPF())}
                 readOnly
-                className="pl-10 pr-3 py-3 w-full bg-white border border-emerald-300 rounded-lg text-emerald-700 font-medium"
+                className="pl-8 md:pl-10 pr-3 py-2 md:py-3 text-sm w-full bg-white border border-emerald-300 rounded-lg text-emerald-700 font-medium"
               />
             </div>
-            <p className="text-xs text-emerald-600 mt-2">
+            <p className="text-xs text-emerald-600 mt-1 md:mt-2">
               NPF = CFG + PWG
             </p>
           </div>
         </div>
 
         {/* Notes Section */}
-        <div className="mt-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="mt-4 md:mt-6">
+          <label className="block text-sm font-medium text-gray-700 mb-1 md:mb-2">
             Catatan / Keterangan (Opsional)
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Tambahkan catatan atau keterangan jika diperlukan..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
-            rows="3"
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
+            rows="2"
             disabled={loading}
           />
         </div>
@@ -676,22 +645,22 @@ const InputNPF = ({ onError }) => {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
-        className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 mb-6"
+        className="bg-white/90 backdrop-blur-sm rounded-xl md:rounded-2xl shadow-xl border border-white/20 mb-4 md:mb-6"
       >
         {/* Periode Selection */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center">
-              <Calendar className="w-6 h-6 mr-3 text-emerald-500" />
-              <h2 className="text-xl font-semibold text-gray-900">Pilih Periode NPF</h2>
+        <div className="p-4 md:p-6 border-b border-gray-200">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+            <div className="flex items-center mb-3 md:mb-0">
+              <Calendar className="w-5 h-5 md:w-6 md:h-6 mr-2 md:mr-3 text-emerald-500" />
+              <h2 className="text-lg md:text-xl font-semibold text-gray-900">Pilih Periode NPF</h2>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex space-x-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <select
                   value={selectedPeriod}
                   onChange={(e) => setSelectedPeriod(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[200px]"
+                  className="px-3 md:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[180px] md:min-w-[200px]"
                   disabled={loading}
                 >
                   <option value="custom">Custom Period</option>
@@ -703,19 +672,19 @@ const InputNPF = ({ onError }) => {
                 </select>
                 
                 {selectedPeriod === 'custom' && (
-                  <div className="flex space-x-2">
+                  <div className="flex flex-wrap gap-2">
                     <input
                       type="text"
                       value={customDate.day}
                       onChange={(e) => handleCustomDateChange('day', e.target.value)}
                       placeholder="DD"
-                      className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-16 md:w-20 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       disabled={loading}
                     />
                     <select
                       value={customDate.month}
                       onChange={(e) => handleCustomDateChange('month', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[100px]"
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-[90px] md:min-w-[100px]"
                       disabled={loading}
                     >
                       {Array.from({length: 12}, (_, i) => {
@@ -733,7 +702,7 @@ const InputNPF = ({ onError }) => {
                       value={customDate.year}
                       onChange={(e) => handleCustomDateChange('year', e.target.value)}
                       placeholder="YYYY"
-                      className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-20 md:w-24 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       disabled={loading}
                     />
                   </div>
@@ -743,10 +712,10 @@ const InputNPF = ({ onError }) => {
                   <button
                     type="button"
                     onClick={() => handleDeletePeriod(selectedPeriod)}
-                    className="inline-flex items-center px-4 py-2 border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors duration-200"
+                    className="inline-flex items-center px-3 md:px-4 py-2 text-sm border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors duration-200"
                     disabled={loading}
                   >
-                    <Trash2 className="w-4 h-4 mr-2" />
+                    <Trash2 className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
                     Hapus
                   </button>
                 )}
@@ -756,51 +725,51 @@ const InputNPF = ({ onError }) => {
         </div>
 
         {/* Form Content */}
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           <form onSubmit={handleSubmit}>
             {renderInputForm()}
 
             {/* Debug Info */}
             {debugInfo && (
               <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800">{debugInfo}</p>
+                <p className="text-xs md:text-sm text-yellow-800">{debugInfo}</p>
               </div>
             )}
 
             {/* Action Buttons */}
-            <div className="mt-8 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+            <div className="mt-6 md:mt-8 flex flex-col sm:flex-row gap-3 md:gap-4">
               <motion.button
                 type="button"
                 onClick={handleReset}
-                className="flex-1 inline-flex items-center justify-center px-6 py-3 border-2 border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition duration-300"
+                className="flex-1 inline-flex items-center justify-center px-4 md:px-6 py-3 text-xs md:text-sm border-2 border-gray-300 rounded-lg md:rounded-xl font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition duration-300"
                 disabled={loading}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <RefreshCw className="w-5 h-5 mr-2" />
+                <RefreshCw className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" />
                 Reset All
               </motion.button>
               
               <motion.button
                 type="submit"
-                className="flex-1 inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-xl text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 shadow-lg hover:shadow-xl transition-all duration-300"
+                className="flex-1 inline-flex items-center justify-center px-4 md:px-6 py-3 text-xs md:text-sm border border-transparent rounded-lg md:rounded-xl font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 shadow-lg hover:shadow-xl transition-all duration-300"
                 disabled={loading}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 {loading ? (
                   <span className="flex items-center justify-center">
-                    <RefreshCw className="animate-spin w-5 h-5 mr-2" />
+                    <RefreshCw className="animate-spin w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" />
                     {selectedPeriod !== 'custom' && allPeriodsData[selectedPeriod] 
-                      ? 'Mengupdate Data...' 
-                      : 'Menyimpan Data...'}
+                      ? 'Mengupdate...' 
+                      : 'Menyimpan...'}
                   </span>
                 ) : (
                   <>
-                    <Save className="w-5 h-5 mr-2" />
+                    <Save className="w-4 h-4 md:w-5 md:h-5 mr-1 md:mr-2" />
                     {selectedPeriod !== 'custom' && allPeriodsData[selectedPeriod] 
-                      ? `Update Data ${selectedPeriod}` 
-                      : `Simpan Data ${getCustomPeriodLabel()}`}
+                      ? `Update ${selectedPeriod}` 
+                      : `Simpan ${getCustomPeriodLabel()}`}
                   </>
                 )}
               </motion.button>

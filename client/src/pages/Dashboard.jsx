@@ -121,7 +121,6 @@ const Dashboard = () => {
     return tabId === 'summary' ? 'DPK, PBY, Kol.2, NPF' : 
            tabId === 'dpk' ? 'Tabungan, Giro, Deposito' : 
            tabId === 'pby' ? 'Griya, Oto, Mitraguna' : 
-           // Kol.2 dan NPF dikosongin
            '';
 };
 
@@ -130,10 +129,10 @@ const Dashboard = () => {
             
             {/* Navbar */}
             <nav className="bg-white/90 backdrop-blur-sm border-b border-gray-200 shadow-sm sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-20">
-                        <div className="flex items-center space-x-4">
-                            <div className="w-20 h-20 flex items-center justify-center">
+                <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+                    <div className="flex flex-col sm:flex-row justify-between items-center h-auto sm:h-20 py-3 sm:py-0">
+                        <div className="flex items-center space-x-2 sm:space-x-4 mb-3 sm:mb-0">
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 flex items-center justify-center">
                                 <img 
                                     src="/pic/logo3.png" 
                                     alt="BSI Logo" 
@@ -141,67 +140,71 @@ const Dashboard = () => {
                                 />
                             </div>
                             
-                            <div className="relative">
-                                <button
-                                    onClick={() => navigate('/profile')}
-                                    className="w-12 h-12 rounded-full overflow-hidden border-2 border-emerald-500 hover:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200"
-                                    title="Profil Saya"
-                                >
-                                    {user?.profile_picture ? (
-                                        <img 
-                                            src={user.profile_picture} 
-                                            alt={user.full_name}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center">
-                                            <span className="text-white font-bold text-lg">
-                                                {user?.full_name?.charAt(0) || 'U'}
-                                            </span>
-                                        </div>
+                            <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+                                <div className="relative">
+                                    <button
+                                        onClick={() => navigate('/profile')}
+                                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-2 border-emerald-500 hover:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-all duration-200"
+                                        title="Profil Saya"
+                                    >
+                                        {user?.profile_picture ? (
+                                            <img 
+                                                src={user.profile_picture} 
+                                                alt={user.full_name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center">
+                                                <span className="text-white font-bold text-sm sm:text-base">
+                                                    {user?.full_name?.charAt(0) || 'U'}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </button>
+                                    {dashboardData?.unread_notifications > 0 && (
+                                        <span className="absolute top-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-500 rounded-full border-2 border-white"></span>
                                     )}
-                                </button>
-                                {dashboardData?.unread_notifications > 0 && (
-                                    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
-                                )}
-                            </div>
-                            
-                            <div>
-                                <h1 className="text-2xl font-bold text-emerald-800">
-                                    Dashboard {
-                                        activeTab === 'summary' ? 'Summary' : 
-                                        activeTab === 'dpk' ? 'DPK' : 
-                                        activeTab === 'pby' ? 'PBY' : 
-                                        activeTab === 'kol2' ? 'Kol. 2' : 
-                                        'NPF'
-                                    }
-                                </h1>
-                                <p className="text-sm text-emerald-600">
-                                    {dashboardData?.branch_info?.name || 'KCP Jakarta Tempo Pavillion 2'}
-                                </p>
+                                </div>
+                                
+                                <div>
+                                    <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-emerald-800">
+                                        Dashboard {
+                                            activeTab === 'summary' ? 'Summary' : 
+                                            activeTab === 'dpk' ? 'DPK' : 
+                                            activeTab === 'pby' ? 'PBY' : 
+                                            activeTab === 'kol2' ? 'Kol. 2' : 
+                                            'NPF'
+                                        }
+                                    </h1>
+                                    <p className="text-xs sm:text-sm text-emerald-600 truncate max-w-[200px] sm:max-w-none">
+                                        {dashboardData?.branch_info?.name || 'KCP Jakarta Tempo Pavillion 2'}
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 w-full sm:w-auto">
                             <button
                                 onClick={() => navigate('/input')}
-                                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 shadow-lg hover:shadow-xl transition-all duration-300"
+                                className="flex-1 sm:flex-none inline-flex items-center justify-center px-3 sm:px-4 py-2 text-xs sm:text-sm border border-transparent rounded-lg font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 shadow-lg hover:shadow-xl transition-all duration-300"
                             >
-                                <PlusCircle className="w-4 h-4 mr-2" />
-                                Input Data
+                                <PlusCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Input Data</span>
+                                <span className="sm:hidden">Input</span>
                             </button>
                             
-                            <div className="text-right hidden md:block">
-                                <p className="text-sm font-medium text-gray-800">{user?.full_name}</p>
+                            <div className="text-right hidden sm:block">
+                                <p className="text-xs sm:text-sm font-medium text-gray-800 truncate">{user?.full_name}</p>
                                 <p className="text-xs text-emerald-600">{user?.position}</p>
                             </div>
                             
                             <button
                                 onClick={handleLogout}
-                                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                className="flex-1 sm:flex-none inline-flex items-center justify-center px-3 sm:px-4 py-2 text-xs sm:text-sm border border-transparent rounded-lg font-medium text-white bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                             >
-                                <LogOut className="w-4 h-4 mr-2" />
-                                Logout
+                                <LogOut className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                                <span className="hidden sm:inline">Logout</span>
+                                <span className="sm:hidden">Logout</span>
                             </button>
                         </div>
                     </div>
@@ -209,18 +212,18 @@ const Dashboard = () => {
             </nav>
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <main className="max-w-7xl mx-auto py-4 sm:py-6 md:py-8 px-3 sm:px-4 md:px-6 lg:px-8">
                 {/* Error Message */}
                 {error && (
                     <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="mb-6"
+                        className="mb-4 sm:mb-6"
                     >
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                        <div className="bg-red-50 border border-red-200 rounded-lg md:rounded-xl p-3 sm:p-4">
                             <div className="flex items-start">
-                                <AlertCircle className="h-5 w-5 text-red-400 mt-0.5 mr-3" />
-                                <p className="text-sm font-medium text-red-700">{error}</p>
+                                <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-400 mt-0.5 mr-2 sm:mr-3" />
+                                <p className="text-xs sm:text-sm font-medium text-red-700">{error}</p>
                             </div>
                         </div>
                     </motion.div>
@@ -231,28 +234,28 @@ const Dashboard = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="mb-8"
+                    className="mb-6 sm:mb-8"
                 >
-                    <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl shadow-xl p-8 text-white">
+                    <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg sm:rounded-xl md:rounded-2xl shadow-lg sm:shadow-xl p-4 sm:p-6 md:p-8 text-white">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                            <div>
-                                <h2 className="text-3xl font-bold mb-2">
+                            <div className="mb-4 md:mb-0">
+                                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-1 sm:mb-2">
                                     Selamat Datang, {user?.full_name}!
                                 </h2>
-                                <p className="text-emerald-100">
+                                <p className="text-sm sm:text-base text-emerald-100 opacity-90">
                                     Dashboard dan Data Kinerja Cabang
                                 </p>
-                                <div className="mt-4 flex items-center space-x-4 text-sm">
-                                    <div className="flex items-center space-x-2">
-                                        <Building className="w-4 h-4" />
-                                        <span>{dashboardData?.branch_info?.name || 'KCP Jakarta Tempo Pavillion 2'}</span>
+                                <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm">
+                                    <div className="flex items-center space-x-1 sm:space-x-2">
+                                        <Building className="w-3 h-3 sm:w-4 sm:h-4" />
+                                        <span className="truncate max-w-[180px] sm:max-w-none">{dashboardData?.branch_info?.name || 'KCP Jakarta Tempo Pavillion 2'}</span>
                                     </div>
                                 </div>
                             </div>
-                            <div className="mt-4 md:mt-0">
-                                <div className="text-right">
-                                    <p className="text-sm opacity-90">Login Terakhir</p>
-                                    <p className="text-lg font-semibold">
+                            <div className="w-full md:w-auto">
+                                <div className="text-left md:text-right">
+                                    <p className="text-xs sm:text-sm opacity-90">Login Terakhir</p>
+                                    <p className="text-sm sm:text-base md:text-lg font-semibold">
                                         {new Date().toLocaleDateString('id-ID', { 
                                             day: 'numeric',
                                             month: 'short',
@@ -272,9 +275,9 @@ const Dashboard = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="mb-8"
+                    className="mb-6 sm:mb-8"
                 >
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                         {tabs.map((tab) => {
                             const isActive = activeTab === tab.id;
                             const Icon = tab.icon;
@@ -285,25 +288,25 @@ const Dashboard = () => {
                                     whileHover={{ scale: 1.02, y: -2 }}
                                     whileTap={{ scale: 0.98 }}
                                     className={`
-                                        cursor-pointer rounded-xl overflow-hidden transition-all duration-300 
+                                        cursor-pointer rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 
                                         ${isActive 
-                                            ? `border-2 border-${tab.color}-500 bg-gradient-to-br from-white to-gray-50 shadow-lg` 
-                                            : 'border border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
+                                            ? `border-2 border-${tab.color}-500 bg-gradient-to-br from-white to-gray-50 shadow-md sm:shadow-lg` 
+                                            : 'border border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm sm:hover:shadow-md'
                                         }
                                     `}
                                     onClick={() => setActiveTab(tab.id)}
                                 >
-                                    <div className="p-4">
-                                        <div className="flex items-center mb-3">
+                                    <div className="p-2 sm:p-3 md:p-4">
+                                        <div className="flex items-center mb-2 sm:mb-3">
                                             <div className={`
-                                                p-2 rounded-lg mr-3 transition-all duration-300 
+                                                p-1 sm:p-1.5 md:p-2 rounded-lg mr-2 sm:mr-3 transition-all duration-300 
                                                 ${isActive 
                                                     ? `bg-${tab.color}-100 border border-${tab.color}-200` 
                                                     : 'bg-gray-100'
                                                 }
                                             `}>
                                                 <Icon className={`
-                                                    w-5 h-5 transition-all duration-300 
+                                                    w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 transition-all duration-300 
                                                     ${isActive 
                                                         ? `text-${tab.color}-600` 
                                                         : 'text-gray-500'
@@ -312,7 +315,7 @@ const Dashboard = () => {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h3 className={`
-                                                    text-base font-bold transition-all duration-300 truncate
+                                                    text-xs sm:text-sm md:text-base font-bold transition-all duration-300 truncate
                                                     ${isActive 
                                                         ? `text-${tab.color}-700` 
                                                         : 'text-gray-900'
@@ -321,7 +324,7 @@ const Dashboard = () => {
                                                     {tab.label}
                                                 </h3>
                                                 <p className={`
-                                                    text-xs mt-0.5 transition-all duration-300 truncate
+                                                    text-[10px] sm:text-xs mt-0.5 transition-all duration-300 truncate
                                                     ${isActive 
                                                         ? `text-${tab.color}-600` 
                                                         : 'text-gray-500'
@@ -334,15 +337,15 @@ const Dashboard = () => {
                                                 <motion.span 
                                                     initial={{ scale: 0 }}
                                                     animate={{ scale: 1 }}
-                                                    className={`ml-2 w-2 h-2 rounded-full bg-${tab.color}-500`}
+                                                    className={`ml-1 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-${tab.color}-500`}
                                                 />
                                             )}
                                         </div>
                                         
-                                        <div className="space-y-1.5">
-                                            <div className="flex justify-between items-center text-xs">
+                                        <div className="space-y-1 sm:space-y-1.5">
+                                            <div className="flex justify-between items-center text-[10px] sm:text-xs">
                                                 <span className={`
-                                                    truncate max-w-[70%]
+                                                    truncate max-w-[60%] sm:max-w-[70%]
                                                     ${isActive 
                                                         ? `text-${tab.color}-600` 
                                                         : 'text-gray-500'
@@ -351,7 +354,7 @@ const Dashboard = () => {
                                                     {getTabContent(tab.id)}
                                                 </span>
                                                 <span className={`
-                                                    font-medium px-1.5 py-0.5 rounded text-xs
+                                                    font-medium px-1 sm:px-1.5 py-0.5 rounded text-[10px] sm:text-xs
                                                     ${isActive 
                                                         ? `bg-${tab.color}-100 text-${tab.color}-700` 
                                                         : 'bg-gray-100 text-gray-700'
@@ -365,7 +368,7 @@ const Dashboard = () => {
                                                 <motion.div 
                                                     initial={{ width: 0 }}
                                                     animate={{ width: '100%' }}
-                                                    className={`h-0.5 bg-gradient-to-r from-${tab.color}-400 to-${tab.color}-500 rounded-full`}
+                                                    className={`h-0.5 sm:h-1 bg-gradient-to-r from-${tab.color}-400 to-${tab.color}-500 rounded-full`}
                                                 />
                                             )}
                                         </div>
@@ -377,7 +380,7 @@ const Dashboard = () => {
                 </motion.div>
 
                 {/* Dashboard Component dengan smooth transition */}
-                <div className="mt-8">
+                <div className="mt-6 sm:mt-8">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={activeTab}
@@ -398,15 +401,17 @@ const Dashboard = () => {
             </main>
 
             {/* Footer */}
-            <footer className="mt-12 border-t border-gray-200 bg-white/50 py-6">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <footer className="mt-8 sm:mt-12 border-t border-gray-200 bg-white/50 py-4 sm:py-6">
+                <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
                     <div className="text-center">
-                        <div className="flex flex-col md:flex-row justify-center items-center space-y-2 md:space-y-0 md:space-x-4">
-                            <p className="text-sm text-gray-600">© 2026 PT Bank Syariah Indonesia Tbk</p>
-                            <span className="hidden md:inline text-gray-300">•</span>
-                            <p className="text-sm text-emerald-600 font-medium">Dashboard System</p>
-                            <span className="hidden md:inline text-gray-300">•</span>
-                            <p className="text-sm text-gray-500">{dashboardData?.branch_info?.name || 'KCP Jakarta Tempo Pavillion 2'}</p>
+                        <div className="flex flex-col sm:flex-row justify-center items-center space-y-1 sm:space-y-0 sm:space-x-3 md:space-x-4">
+                            <p className="text-xs sm:text-sm text-gray-600">© 2026 PT Bank Syariah Indonesia Tbk</p>
+                            <span className="hidden sm:inline text-gray-300">•</span>
+                            <p className="text-xs sm:text-sm text-emerald-600 font-medium">Dashboard System</p>
+                            <span className="hidden sm:inline text-gray-300">•</span>
+                            <p className="text-xs sm:text-sm text-gray-500 truncate max-w-[200px] sm:max-w-none">
+                                {dashboardData?.branch_info?.name || 'KCP Jakarta Tempo Pavillion 2'}
+                            </p>
                         </div>
                         <p className="text-xs text-gray-400 mt-2">
                             {new Date().toLocaleDateString('id-ID', { 

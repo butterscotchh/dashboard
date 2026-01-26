@@ -400,6 +400,64 @@ const authService = {
         }
     },
     
+    // ============ TABUNGAN DATA ENDPOINTS ============
+
+// Get all Tabungan data
+async getTabunganData() {
+    try {
+        const response = await api.get('/tabungan');
+        return response.data;
+    } catch (error) {
+        console.error('Get Tabungan data error:', error);
+        return {
+            success: false,
+            error: error.response?.data?.error || 'Failed to get Tabungan data'
+        };
+    }
+},
+
+// Get specific period Tabungan data
+async getTabunganPeriodData(period) {
+    try {
+        const response = await api.get(`/tabungan/${encodeURIComponent(period)}`);
+        return response.data;
+    } catch (error) {
+        console.error('Get Tabungan period data error:', error);
+        return {
+            success: false,
+            error: error.response?.data?.error || 'Failed to get period data'
+        };
+    }
+},
+
+// Save/update Tabungan data
+async saveTabunganData(data) {
+    try {
+        const response = await api.post('/tabungan', data);
+        return response.data;
+    } catch (error) {
+        console.error('Save Tabungan data error:', error);
+        return {
+            success: false,
+            error: error.response?.data?.error || 'Failed to save Tabungan data'
+        };
+    }
+},
+
+// Delete Tabungan data
+async deleteTabunganData(period) {
+    try {
+        const response = await api.delete(`/tabungan/${encodeURIComponent(period)}`);
+        return response.data;
+    } catch (error) {
+        console.error('Delete Tabungan data error:', error);
+        return {
+            success: false,
+            error: error.response?.data?.error || 'Failed to delete Tabungan data'
+        };
+    }
+},
+
     // ============ PBY DATA ENDPOINTS ============
     
     // Get all PBY data
