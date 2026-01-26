@@ -20,7 +20,9 @@ import {
   AlertTriangle,
   RefreshCw,
   Wallet,
-  Banknote
+  Banknote,
+  Building2,
+  Gem as GemIcon
 } from 'lucide-react';
 
 const DashboardSummary = () => {
@@ -139,7 +141,7 @@ const DashboardSummary = () => {
             try {
                 setLoading(true);
                 
-                // Load DPK data
+                // Load DPK data (dengan tambahan tabungan khusus)
                 const dpkResponse = await authService.getDPKData();
                 if (dpkResponse.success) {
                     const sortedDpk = [...dpkResponse.data].sort((a, b) => {
@@ -177,10 +179,13 @@ const DashboardSummary = () => {
                         target_tabungan: toNumber(item.target_tabungan),
                         target_giro: toNumber(item.target_giro),
                         target_deposito: toNumber(item.target_deposito),
-                        target_casa: toNumber(item.target_casa)
+                        target_casa: toNumber(item.target_casa),
+                        // Data tabungan khusus dari tabel
+                        tabungan_haji: toNumber(item.tabungan_haji || 0),
+                        tabungan_bisnis: toNumber(item.tabungan_bisnis || 0),
+                        tabungan_emas: toNumber(item.tabungan_emas || 0)
                     }));
 
-                    // ========== PERBAIKAN: Position = Oldest data + Target growth ==========
                     const targetsDpk = historicalDpk.length > 0 ? [
                         { 
                             name: 'DPK', 
@@ -260,7 +265,6 @@ const DashboardSummary = () => {
                         target_cicil_emas: toNumber(item.target_cicil_emas)
                     }));
 
-                    // ========== PERBAIKAN: Position = Oldest data + Target growth ==========
                     const targetsPby = historicalPby.length > 0 ? [
                         { 
                             name: 'PBY', 
@@ -432,6 +436,9 @@ const DashboardSummary = () => {
             case 'Tabungan': return <Coins className="w-5 h-5" />;
             case 'Giro': return <CreditCard className="w-5 h-5" />;
             case 'Deposito': return <Landmark className="w-5 h-5" />;
+            case 'Tabungan Haji': return <Landmark className="w-5 h-5" />;
+            case 'Tabungan Bisnis': return <Building2 className="w-5 h-5" />;
+            case 'Tabungan Emas': return <GemIcon className="w-5 h-5" />;
             default: return <DollarSign className="w-5 h-5" />;
         }
     };
@@ -454,6 +461,9 @@ const DashboardSummary = () => {
             case 'Tabungan': return 'from-violet-500 to-violet-600';
             case 'Giro': return 'from-amber-500 to-amber-600';
             case 'Deposito': return 'from-rose-500 to-rose-600';
+            case 'Tabungan Haji': return 'from-indigo-500 to-indigo-600';
+            case 'Tabungan Bisnis': return 'from-teal-500 to-teal-600';
+            case 'Tabungan Emas': return 'from-yellow-500 to-yellow-600';
             default: return 'from-gray-500 to-gray-600';
         }
     };
@@ -505,10 +515,9 @@ const DashboardSummary = () => {
                 ytd: formatForPerformanceCard(calculateYTD(latestData.dpk, oldestData?.dpk || 0)),
                 mtdTrend: (latestData.dpk - (previousData?.dpk || 0)) >= 0 ? 'up' : 'down',
                 ytdTrend: (latestData.dpk - (oldestData?.dpk || 0)) >= 0 ? 'up' : 'down',
-                // ========== PERBAIKAN: Parameter order dan rumus ==========
                 achievement: calculateAchievement(
-                    latestData.dpk, // Parameter 1: latest/actual
-                    dpkData.targets.find(t => t.name === 'DPK')?.position || 0 // Parameter 2: position
+                    latestData.dpk,
+                    dpkData.targets.find(t => t.name === 'DPK')?.position || 0
                 ),
                 icon: getSegmentIcon('DPK'),
                 color: getSegmentColor('DPK'),
@@ -573,6 +582,37 @@ const DashboardSummary = () => {
                 icon: getSegmentIcon('Deposito'),
                 color: getSegmentColor('Deposito'),
                 type: 'dpk'
+            }
+        ];
+    };
+
+    // Get Tabungan Khusus performance cards (3 cards - Haji, Bisnis, Emas) - tanpa MTD/YTD
+    const getTabunganKhususCards = () => {
+        const latestData = getLatestData(dpkData);
+        
+        if (!latestData) return [];
+
+        return [
+            {
+                name: 'Tabungan Haji',
+                value: formatForPerformanceCard(latestData.tabungan_haji || 0),
+                icon: getSegmentIcon('Tabungan Haji'),
+                color: getSegmentColor('Tabungan Haji'),
+                type: 'tabungan_khusus'
+            },
+            {
+                name: 'Tabungan Bisnis',
+                value: formatForPerformanceCard(latestData.tabungan_bisnis || 0),
+                icon: getSegmentIcon('Tabungan Bisnis'),
+                color: getSegmentColor('Tabungan Bisnis'),
+                type: 'tabungan_khusus'
+            },
+            {
+                name: 'Tabungan Emas',
+                value: formatForPerformanceCard(latestData.tabungan_emas || 0),
+                icon: getSegmentIcon('Tabungan Emas'),
+                color: getSegmentColor('Tabungan Emas'),
+                type: 'tabungan_khusus'
             }
         ];
     };
@@ -754,6 +794,7 @@ const DashboardSummary = () => {
     };
 
     const dpkCards = getDPKPerformanceCards();
+    const tabunganKhususCards = getTabunganKhususCards();
     const pbyCards = getPBYPerformanceCards();
     const kol2Card = getKOL2PerformanceCard();
     const npfCard = getNPFPerformanceCard();
@@ -761,12 +802,13 @@ const DashboardSummary = () => {
     // Combine all cards in correct order
     const allPerformanceCards = [
         ...dpkCards,
+        ...tabunganKhususCards,
         ...pbyCards,
         ...(kol2Card ? [kol2Card] : []),
         ...(npfCard ? [npfCard] : [])
     ];
 
-    // Get pie chart data
+    // Get pie chart data dengan period terakhir masing-masing
     const getPieChartData = () => {
         const latestDpk = getLatestData(dpkData);
         const latestPby = getLatestData(pbyData);
@@ -779,6 +821,7 @@ const DashboardSummary = () => {
                 color: 'from-green-500 to-green-600',
                 iconColor: 'text-green-500',
                 data: latestDpk,
+                period: latestDpk?.period || '-',
                 segments: latestDpk ? [
                     { name: 'Tabungan', value: latestDpk.tabungan || 0, color: '#8b5cf6' },
                     { name: 'Giro', value: latestDpk.giro || 0, color: '#f59e0b' },
@@ -792,6 +835,7 @@ const DashboardSummary = () => {
                 color: 'from-blue-500 to-blue-600',
                 iconColor: 'text-blue-500',
                 data: latestPby,
+                period: latestPby?.period || '-',
                 segments: latestPby ? [
                     { name: 'Griya', value: latestPby.griya || 0, color: '#3b82f6' },
                     { name: 'Oto', value: latestPby.oto || 0, color: '#10b981' },
@@ -807,6 +851,7 @@ const DashboardSummary = () => {
                 color: 'from-purple-500 to-purple-600',
                 iconColor: 'text-purple-500',
                 data: latestKol2,
+                period: latestKol2?.period || '-',
                 segments: latestKol2 ? [
                     { name: 'Griya', value: latestKol2.griya || 0, color: '#3b82f6' },
                     { name: 'Oto', value: latestKol2.oto || 0, color: '#10b981' },
@@ -822,6 +867,7 @@ const DashboardSummary = () => {
                 color: 'from-red-500 to-red-600',
                 iconColor: 'text-red-500',
                 data: latestNpf,
+                period: latestNpf?.period || '-',
                 segments: latestNpf ? [
                     { name: 'Griya', value: latestNpf.griya || 0, color: '#3b82f6' },
                     { name: 'Oto', value: latestNpf.oto || 0, color: '#10b981' },
@@ -840,7 +886,7 @@ const DashboardSummary = () => {
     return (
         <>
 
-            {/* All Performance Cards (15 cards total) */}
+            {/* All Performance Cards (18 cards total) */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -863,13 +909,15 @@ const DashboardSummary = () => {
                                 <div className="flex justify-between items-start mb-3">
                                     <div className="flex items-center">
                                         <div className="p-2 rounded-lg bg-gray-100 mr-2">
-                                            <div className={item.type === 'npf' ? 'text-red-500' : 'text-emerald-500'}>
+                                            <div className={item.type === 'npf' ? 'text-red-500' : 
+                                                          item.type === 'tabungan_khusus' ? 'text-blue-500' : 
+                                                          'text-emerald-500'}>
                                                 {item.icon}
                                             </div>
                                         </div>
                                         <h3 className="text-lg font-bold text-gray-900">{item.name}</h3>
                                     </div>
-                                    {item.achievement !== '-' && (
+                                    {item.achievement && item.achievement !== '-' && (
                                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                                             getAchievementColor(item.achievement)
                                         }`}>
@@ -878,29 +926,37 @@ const DashboardSummary = () => {
                                     )}
                                 </div>
                                 
-                                <p className="text-2xl font-bold text-gray-900 mb-3">{item.value}</p>
+                                {/* Font lebih besar untuk tabungan khusus */}
+                                <p className={`font-bold text-gray-900 mb-3 ${
+                                    item.type === 'tabungan_khusus' ? 'text-3xl' : 'text-2xl'
+                                }`}>
+                                    {item.value}
+                                </p>
                                 
-                                <div className="space-y-1.5">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">MTD:</span>
-                                        <div className="flex items-center">
-                                            <span className="font-medium text-gray-900">{item.mtd}</span>
-                                            <span className={`ml-1 ${getTrendColor(item.mtdTrend === 'up' ? 1 : -1)}`}>
-                                                {getTrendIcon(item.mtdTrend === 'up' ? 1 : -1)}
-                                            </span>
+                                {/* Hanya tampilkan MTD/YTD untuk card yang bukan tabungan khusus */}
+                                {item.type !== 'tabungan_khusus' && (
+                                    <div className="space-y-1.5">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm text-gray-600">MTD:</span>
+                                            <div className="flex items-center">
+                                                <span className="font-medium text-gray-900">{item.mtd}</span>
+                                                <span className={`ml-1 ${getTrendColor(item.mtdTrend === 'up' ? 1 : -1)}`}>
+                                                    {getTrendIcon(item.mtdTrend === 'up' ? 1 : -1)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm text-gray-600">YTD:</span>
+                                            <div className="flex items-center">
+                                                <span className="font-medium text-gray-900">{item.ytd}</span>
+                                                <span className={`ml-1 ${getTrendColor(item.ytdTrend === 'up' ? 1 : -1)}`}>
+                                                    {getTrendIcon(item.ytdTrend === 'up' ? 1 : -1)}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                    
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">YTD:</span>
-                                        <div className="flex items-center">
-                                            <span className="font-medium text-gray-900">{item.ytd}</span>
-                                            <span className={`ml-1 ${getTrendColor(item.ytdTrend === 'up' ? 1 : -1)}`}>
-                                                {getTrendIcon(item.ytdTrend === 'up' ? 1 : -1)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -1008,7 +1064,7 @@ const DashboardSummary = () => {
                                     
                                     <div className="mt-3 pt-3 border-t border-gray-100 w-full">
                                         <p className="text-xs text-gray-500 text-center">
-                                            Data periode terkini
+                                            Data periode: {chart.period}
                                         </p>
                                     </div>
                                 </div>
