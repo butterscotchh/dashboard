@@ -26,6 +26,17 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
+//test koneksi
+app.get("/api/test-db", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT 1 AS status");
+    res.json({ ok: true, db: rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // Hardcode branch info (karena cuma satu cabang)
 const BRANCH_INFO = {
     id: 'KCP-TEMPO-001',
@@ -2588,4 +2599,6 @@ app.listen(PORT, () => {
     console.log(`📍 Area: ${BRANCH_INFO.area}`);
     console.log(`🔐 Single Admin Mode`);
     console.log(`📊 Activity Logging: ENABLED`);
+    console.log("APP PORT =", process.env.PORT);
+console.log("DB PORT =", process.env.DB_PORT);
 });
