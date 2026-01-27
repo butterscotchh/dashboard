@@ -3,7 +3,8 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
+const uuidv4 = () => crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now();
 require('dotenv').config();
 
 const app = express();
