@@ -48,6 +48,30 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Root endpoint - API documentation
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: '🏦 Bank Branch Dashboard API',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    branch: BRANCH_INFO,
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/login (POST)',
+      dpk: '/api/dpk',
+      pby: '/api/pby', 
+      kol2: '/api/kol2',
+      npf: '/api/npf',
+      tabungan: '/api/tabungan',
+      activity: '/api/activity-logs',
+      profile: '/api/profile'
+    },
+    frontend: 'Coming soon...',
+    docs: 'Use Postman or curl to test endpoints'
+  });
+});
+
 // 2. Test database connection
 app.get("/api/test-db", async (req, res) => {
   try {
