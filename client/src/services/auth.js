@@ -1,14 +1,21 @@
 import axios from 'axios';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-const API_URL = 'http://localhost:5000/api';
-
-// Create axios instance
+// Create axios instance dengan config dinamis
 const api = axios.create({
-    baseURL: API_URL,
+    baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: process.env.NODE_ENV === 'production' ? 15000 : 10000,
 });
+
+// LOG untuk debugging (hanya di development)
+if (process.env.NODE_ENV === 'development') {
+    console.log('🌐 API Base URL:', API_BASE_URL);
+    console.log('🚀 Environment:', process.env.NODE_ENV);
+    console.log('📡 API Key:', process.env.REACT_APP_API_URL ? 'Set' : 'Not set');
+}
 
 // Request interceptor untuk menambahkan token
 api.interceptors.request.use(
@@ -17,6 +24,12 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+        
+        // Log request di development
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`➡️ ${config.method.toUpperCase()} ${config.baseURL}${config.url}`);
+        }
+        
         return config;
     },
     (error) => {
@@ -26,8 +39,19 @@ api.interceptors.request.use(
 
 // Response interceptor untuk handle error
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // Log response di development
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`⬅️ ${response.status} ${response.config.url}`, response.data);
+        }
+        return response;
+    },
     (error) => {
+        // Log error di development
+        if (process.env.NODE_ENV === 'development') {
+            console.error('❌ API Error:', error.response?.status, error.config?.url, error.message);
+        }
+        
         // Jika token expired, redirect ke login
         if (error.response && error.response.status === 401) {
             // Hapus semua data dari localStorage
@@ -40,7 +64,9 @@ api.interceptors.response.use(
     }
 );
 
-// Helper function untuk detect device type
+// ... (sisa code Anda tetap sama, mulai dari Helper function untuk detect device type)
+// Semua function Anda yang sudah ada tetap dipertahankan
+
 const getDeviceType = () => {
     const ua = navigator.userAgent;
     if (/mobile/i.test(ua)) return 'Mobile';

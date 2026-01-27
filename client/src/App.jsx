@@ -2,9 +2,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Input from './pages/Input'; // Tambah import Input
+import Input from './pages/Input';
 import ProtectedRoute from './components/ProtectedRoute';
-import Profile from './pages/Profile'; // Tambah import Profile
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -28,7 +28,7 @@ function App() {
           } 
         />
         <Route 
-          path="/profile"  // TAMBAH ROUTE PROFILE
+          path="/profile"
           element={
             <ProtectedRoute>
               <Profile />
@@ -36,7 +36,14 @@ function App() {
           } 
         />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        
+        {/* Fallback untuk 404 */}
+        <Route path="*" element={
+          <div style={{ padding: '20px', textAlign: 'center' }}>
+            <h1>404 - Page Not Found</h1>
+            <p>Return to <a href="/dashboard">Dashboard</a></p>
+          </div>
+        } />
       </Routes>
     </Router>
   );

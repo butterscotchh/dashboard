@@ -8,12 +8,64 @@ require('dotenv').config();
 
 const app = express();
 
-// Middleware
-app.use(cors({
-    origin: 'http://localhost:3000',
-    credentials: true
-}));
-app.use(express.json());
+// Konfigurasi CORS untuk development dan production
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Izinkan request tanpa origin (mobile apps, curl, dll)
+        if (!origin) return callback(null, true);
+        
+        // List domain yang diizinkan
+        const allowedOrigins = [
+            'http://localhost:3000',      // React dev
+            'http://localhost:5173',      // Vite dev
+            'https://*.vercel.app',       // Semua domain Vercel
+            /\.vercel\.app$/              // Regex untuk Vercel
+        ];
+        
+        // Cek apakah origin diizinkan
+        const isAllowed = allowedOrigins.some(allowed => {
+            if (typeof allowed === 'string') {
+                return origin === allowed || 
+                       (allowed.includes('*') && origin.includes(allowed.replace('*.', '')));
+            } else if (allowed instanceof RegExp) {
+                return allowed.test(origin);
+            }
+            return false;
+        });
+        
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            console.log('🚫 CORS blocked for origin:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+
+// 2. Test database connection
+app.get("/api/test-db", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT 1 AS status");
+    res.json({ 
+      success: true, 
+      message: 'Database connected successfully',
+      db: rows[0],
+      branch: BRANCH_INFO
+    });
+  } catch (err) {
+    console.error('Database connection error:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Database connection failed',
+      details: err.message
+    });
+  }
+});
 
 // Database connection pool
 const pool = mysql.createPool({
@@ -24,17 +76,6 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
-});
-
-//test koneksi
-app.get("/api/test-db", async (req, res) => {
-  try {
-    const [rows] = await pool.query("SELECT 1 AS status");
-    res.json({ ok: true, db: rows[0] });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
 });
 
 // Hardcode branch info (karena cuma satu cabang)
@@ -2591,14 +2632,20 @@ app.use((req, res) => {
     });
 });
 
-// Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`✅ Server running on http://localhost:${PORT}`);
-    console.log(`🏢 Branch: ${BRANCH_INFO.name}`);
-    console.log(`📍 Area: ${BRANCH_INFO.area}`);
-    console.log(`🔐 Single Admin Mode`);
-    console.log(`📊 Activity Logging: ENABLED`);
-    console.log("APP PORT =", process.env.PORT);
-console.log("DB PORT =", process.env.DB_PORT);
-});
+// ============ EXPORT FOR VERCEL ============
+// Vercel akan menggunakan export ini
+module.exports = app;
+
+// Hanya start server jika tidak di environment Vercel
+if (require.main === module) {
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`✅ Server running on http://localhost:${PORT}`);
+        console.log(`🏢 Branch: ${BRANCH_INFO.name}`);
+        console.log(`📍 Area: ${BRANCH_INFO.area}`);
+        console.log(`🔐 Single Admin Mode`);
+        console.log(`📊 Activity Logging: ENABLED`);
+        console.log("APP PORT =", process.env.PORT);
+        console.log("DB PORT =", process.env.DB_PORT);
+    });
+}
