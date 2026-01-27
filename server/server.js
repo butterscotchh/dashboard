@@ -9,6 +9,8 @@ require('dotenv').config();
 
 const app = express();
 
+app.use(express.static(path.join(__dirname, '../client/build')));
+
 // Konfigurasi CORS untuk development dan production
 const corsOptions = {
     origin: function (origin, callback) {
@@ -47,6 +49,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
 
 // Root endpoint - API documentation
 app.get('/', (req, res) => {
@@ -147,7 +150,10 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
+console.log('📁 Serving React from:', path.join(__dirname, '../client/build'));
+
 // ============ ROUTES ============
+
 
 // 1. Health check
 app.get('/api/health', (req, res) => {
@@ -2657,6 +2663,9 @@ app.use((req, res) => {
     });
 });
 
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
+});
 // ============ EXPORT FOR VERCEL ============
 // Vercel akan menggunakan export ini
 module.exports = app;
