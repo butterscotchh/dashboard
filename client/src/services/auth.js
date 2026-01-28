@@ -237,66 +237,34 @@ const authService = {
         }
     },
     
-    // Log activity - DIPERBAIKI: Tambahkan endpoint atau handle error
-    async logActivity(action, userData = {}, details = {}) {
-        try {
-            const user = this.getCurrentUser();
-            
-            // OPTION 1: Jika backend punya endpoint khusus untuk log activity
-            // try {
-            //     const response = await api.post('/api/log-activity', {
-            //         action: action,
-            //         username: user?.username || userData.username,
-            //         user_name: user?.full_name || userData.full_name,
-            //         user_agent: navigator.userAgent,
-            //         device_type: getDeviceType(),
-            //         status: 'success',
-            //         details: JSON.stringify({ ...details, ...userData })
-            //     });
-            //     return response.data;
-            // } catch (error) {
-            //     console.warn('Log activity endpoint not available, using fallback');
-            // }
-            
-            // OPTION 2: Fallback - Simpan di localStorage atau console saja
-            console.log(`📝 Activity Logged: ${action}`, {
-                user: user?.username,
-                details: details
-            });
-            
-            return { 
-                success: true, 
-                message: 'Activity logged locally',
-                action: action 
-            };
-            
-        } catch (error) {
-            console.error('Failed to log activity:', error);
-            // Jangan throw error, biarkan proses tetap berjalan
-            return { 
-                success: false, 
-                error: 'Failed to log activity',
-                action: action 
-            };
-        }
-    },
-    
-    // ============ ACTIVITY LOGS ENDPOINTS ============
-    
-    // Get activity logs (semua user)
-    async getActivityLogs(params = {}) {
-        try {
-            const response = await api.get('/api/activity-logs', { params });
-            return response.data;
-        } catch (error) {
-            console.error('Get activity logs error:', error);
-            return {
-                success: false,
-                error: error.response?.data?.error || 'Failed to get activity logs'
-            };
-        }
-    },
-    
+   // Log activity - dengan endpoint POST yang benar
+async logActivity(action, userData = {}, details = {}) {
+    try {
+        const user = this.getCurrentUser();
+        const response = await api.post('/api/activity-logs', {
+            action: action,
+            username: user?.username || userData.username,
+            user_name: user?.full_name || userData.full_name,
+            user_agent: navigator.userAgent,
+            device_type: getDeviceType(),
+            status: 'success',
+            details: JSON.stringify({ ...details, ...userData })
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Failed to log activity:', error);
+        // Fallback ke console log
+        console.log(`📝 Activity (Fallback): ${action}`, {
+            user: user?.username,
+            details: details
+        });
+        return { 
+            success: false, 
+            error: 'Failed to log activity',
+            action: action 
+        };
+    }
+},
     // Get user's own activity logs
     async getMyActivityLogs(params = {}) {
         try {
