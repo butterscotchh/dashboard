@@ -2372,6 +2372,50 @@ app.delete('/api/tabungan/:period', authenticateToken, async (req, res) => {
     }
 });
 
+// 37. CREATE ACTIVITY LOG (POST)
+app.post('/api/activity-logs', authenticateToken, async (req, res) => {
+    try {
+        const {
+            action,
+            username,
+            user_name,
+            user_agent,
+            device_type,
+            status = 'success',
+            details
+        } = req.body;
+        
+        const userAgent = req.headers['user-agent'] || user_agent || 'Unknown';
+        
+        await pool.execute(
+            `INSERT INTO activity_logs (id, action, username, user_name, user_agent, device_type, status, details)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                uuidv4(),
+                action,
+                username || req.user.username,
+                user_name || req.user.name,
+                userAgent,
+                device_type || (userAgent.includes('Mobile') ? 'Mobile' : 'Desktop'),
+                status,
+                details ? JSON.stringify(details) : null
+            ]
+        );
+        
+        res.json({
+            success: true,
+            message: 'Activity logged successfully'
+        });
+        
+    } catch (error) {
+        console.error('Create activity log error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to create activity log' 
+        });
+    }
+});
+
 // ============ HELPER FUNCTIONS ============
 
 // Helper function untuk log activity
