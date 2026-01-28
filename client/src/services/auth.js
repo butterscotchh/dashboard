@@ -237,12 +237,48 @@ const authService = {
         }
     },
     
-    // Log activity - FIX: Backend tidak punya endpoint ini, jadi kita skip
+    // Log activity - DIPERBAIKI: Tambahkan endpoint atau handle error
     async logActivity(action, userData = {}, details = {}) {
-        // Backend sudah handle logging otomatis di setiap endpoint
-        // Tidak perlu request tambahan
-        console.log(`Activity logged: ${action}`);
-        return { success: true };
+        try {
+            const user = this.getCurrentUser();
+            
+            // OPTION 1: Jika backend punya endpoint khusus untuk log activity
+            // try {
+            //     const response = await api.post('/api/log-activity', {
+            //         action: action,
+            //         username: user?.username || userData.username,
+            //         user_name: user?.full_name || userData.full_name,
+            //         user_agent: navigator.userAgent,
+            //         device_type: getDeviceType(),
+            //         status: 'success',
+            //         details: JSON.stringify({ ...details, ...userData })
+            //     });
+            //     return response.data;
+            // } catch (error) {
+            //     console.warn('Log activity endpoint not available, using fallback');
+            // }
+            
+            // OPTION 2: Fallback - Simpan di localStorage atau console saja
+            console.log(`📝 Activity Logged: ${action}`, {
+                user: user?.username,
+                details: details
+            });
+            
+            return { 
+                success: true, 
+                message: 'Activity logged locally',
+                action: action 
+            };
+            
+        } catch (error) {
+            console.error('Failed to log activity:', error);
+            // Jangan throw error, biarkan proses tetap berjalan
+            return { 
+                success: false, 
+                error: 'Failed to log activity',
+                action: action 
+            };
+        }
     },
     
     // ============ ACTIVITY LOGS ENDPOINTS ============
@@ -328,7 +364,9 @@ const authService = {
             const responseData = response.data;
             
             if (responseData.success) {
-                // Backend sudah handle activity logging otomatis
+                // Log activity setelah ganti password
+                await this.logActivity('password_change', {})
+                    .catch(err => console.warn('Activity log failed:', err));
             }
             
             return responseData;
