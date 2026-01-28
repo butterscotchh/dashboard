@@ -237,31 +237,29 @@ const authService = {
         }
     },
     
-   // Log activity - dengan endpoint POST yang benar
+ // Log activity - FIXED VERSION
 async logActivity(action, userData = {}, details = {}) {
     try {
         const user = this.getCurrentUser();
-        const response = await api.post('/api/activity-logs', {
-            action: action,
+        
+        // Log ke console untuk debugging
+        console.log(`📝 Activity: ${action}`, {
             username: user?.username || userData.username,
-            user_name: user?.full_name || userData.full_name,
-            user_agent: navigator.userAgent,
-            device_type: getDeviceType(),
-            status: 'success',
-            details: JSON.stringify({ ...details, ...userData })
-        });
-        return response.data;
-    } catch (error) {
-        console.error('Failed to log activity:', error);
-        // Fallback ke console log
-        console.log(`📝 Activity (Fallback): ${action}`, {
-            user: user?.username,
             details: details
         });
+        
+        // Karena backend sudah handle logging di setiap endpoint,
+        // kita tidak perlu kirim request tambahan
+        return { 
+            success: true, 
+            message: 'Activity logged locally' 
+        };
+        
+    } catch (error) {
+        console.error('Failed to log activity:', error);
         return { 
             success: false, 
-            error: 'Failed to log activity',
-            action: action 
+            error: 'Activity log failed' 
         };
     }
 },
