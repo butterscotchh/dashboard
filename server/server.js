@@ -4,12 +4,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const crypto = require('crypto');
-const uuidv4 = () => crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now();
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
-
-app.use(express.static(path.join(__dirname, '../client/build')));
 
 // Konfigurasi CORS untuk development dan production
 const corsOptions = {
@@ -19,10 +17,10 @@ const corsOptions = {
         
         // List domain yang diizinkan
         const allowedOrigins = [
-            'http://localhost:3000',      // React dev
-            'http://localhost:5173',      // Vite dev
-            'https://*.vercel.app',       // Semua domain Vercel
-            /\.vercel\.app$/              // Regex untuk Vercel
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'https://*.vercel.app',
+            /\.vercel\.app$/
         ];
         
         // Cek apakah origin diizinkan
@@ -49,51 +47,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
-
-// Root endpoint - API documentation
-app.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: '🏦 Bank Branch Dashboard API',
-    version: '1.0.0',
-    timestamp: new Date().toISOString(),
-    branch: BRANCH_INFO,
-    endpoints: {
-      health: '/api/health',
-      auth: '/api/login (POST)',
-      dpk: '/api/dpk',
-      pby: '/api/pby', 
-      kol2: '/api/kol2',
-      npf: '/api/npf',
-      tabungan: '/api/tabungan',
-      activity: '/api/activity-logs',
-      profile: '/api/profile'
-    },
-    frontend: 'Coming soon...',
-    docs: 'Use Postman or curl to test endpoints'
-  });
-});
-
-// 2. Test database connection
-app.get("/api/test-db", async (req, res) => {
-  try {
-    const [rows] = await pool.query("SELECT 1 AS status");
-    res.json({ 
-      success: true, 
-      message: 'Database connected successfully',
-      db: rows[0],
-      branch: BRANCH_INFO
-    });
-  } catch (err) {
-    console.error('Database connection error:', err);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Database connection failed',
-      details: err.message
-    });
-  }
-});
+app.use(express.json());
 
 // Database connection pool
 const pool = mysql.createPool({
@@ -106,12 +60,15 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-// Hardcode branch info (karena cuma satu cabang)
+// Hardcode branch info
 const BRANCH_INFO = {
     id: 'KCP-TEMPO-001',
     name: 'KCP Jakarta Tempo Pavillion 2',
     area: 'AREA JAKARTA SAHARJO'
 };
+
+// UUID helper
+const uuidv4 = () => crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now();
 
 // Generate tokens
 const generateAccessToken = (user) => {
@@ -122,7 +79,7 @@ const generateAccessToken = (user) => {
             name: user.full_name
         },
         process.env.JWT_SECRET,
-        { expiresIn: '24h' } // Lebih lama karena single user
+        { expiresIn: '24h' }
     );
 };
 
@@ -150,12 +107,51 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-console.log('📁 Serving React from:', path.join(__dirname, '../client/build'));
-
 // ============ ROUTES ============
 
+// 1. Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: '🏦 Bank Branch Dashboard API',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    branch: BRANCH_INFO,
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/login (POST)',
+      dpk: '/api/dpk',
+      pby: '/api/pby', 
+      kol2: '/api/kol2',
+      npf: '/api/npf',
+      tabungan: '/api/tabungan',
+      activity: '/api/activity-logs',
+      profile: '/api/profile'
+    }
+  });
+});
 
-// 1. Health check
+// 2. Test database connection
+app.get("/api/test-db", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT 1 AS status");
+    res.json({ 
+      success: true, 
+      message: 'Database connected successfully',
+      db: rows[0],
+      branch: BRANCH_INFO
+    });
+  } catch (err) {
+    console.error('Database connection error:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Database connection failed',
+      details: err.message
+    });
+  }
+});
+
+// 3. Health check
 app.get('/api/health', (req, res) => {
     res.json({ 
         success: true, 
@@ -165,7 +161,7 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// 2. LOGIN (single admin user) - DITAMBAHKAN LOG ACTIVITY
+// 4. LOGIN
 app.post('/api/login', async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -177,10 +173,8 @@ app.post('/api/login', async (req, res) => {
             });
         }
         
-        // Get user agent info
         const userAgent = req.headers['user-agent'] || 'Unknown';
         
-        // Cari admin user
         const [users] = await pool.execute(
             `SELECT id, username, password, full_name 
              FROM users 
@@ -189,7 +183,6 @@ app.post('/api/login', async (req, res) => {
         );
         
         if (users.length === 0) {
-            // Log failed login attempt
             await pool.execute(
                 `INSERT INTO activity_logs (id, action, username, user_name, user_agent, device_type, status)
                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -212,10 +205,8 @@ app.post('/api/login', async (req, res) => {
         
         const user = users[0];
         
-        // Verify password
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
-            // Log failed login attempt
             await pool.execute(
                 `INSERT INTO activity_logs (id, action, username, user_name, user_agent, device_type, status)
                  VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -236,16 +227,13 @@ app.post('/api/login', async (req, res) => {
             });
         }
         
-        // Generate token
         const accessToken = generateAccessToken(user);
         
-        // Update last login
         await pool.execute(
             'UPDATE users SET last_login = NOW() WHERE id = ?',
             [user.id]
         );
         
-        // Log successful login
         await pool.execute(
             `INSERT INTO activity_logs (id, action, username, user_name, user_agent, device_type, status)
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -260,7 +248,6 @@ app.post('/api/login', async (req, res) => {
             ]
         );
         
-        // Hapus password dari response
         delete user.password;
         
         res.json({
@@ -282,7 +269,7 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// 3. VERIFY TOKEN
+// 5. VERIFY TOKEN
 app.get('/api/verify-token', authenticateToken, (req, res) => {
     res.json({
         success: true,
@@ -294,9 +281,7 @@ app.get('/api/verify-token', authenticateToken, (req, res) => {
     });
 });
 
-// ============ ACTIVITY LOGS ENDPOINTS ============
-
-// 4. GET ALL ACTIVITY LOGS
+// 6. GET ALL ACTIVITY LOGS
 app.get('/api/activity-logs', authenticateToken, async (req, res) => {
     try {
         const { 
@@ -311,7 +296,6 @@ app.get('/api/activity-logs', authenticateToken, async (req, res) => {
             sortOrder = 'desc'
         } = req.query;
         
-        // Build WHERE clause
         let whereClause = 'WHERE 1=1';
         const params = [];
         
@@ -340,17 +324,14 @@ app.get('/api/activity-logs', authenticateToken, async (req, res) => {
             params.push(status);
         }
         
-        // Validate sort parameters
         const validSortColumns = ['created_at', 'username', 'action', 'status'];
         const validSortOrders = ['asc', 'desc'];
         
         const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'created_at';
         const sortDirection = validSortOrders.includes(sortOrder.toLowerCase()) ? sortOrder.toUpperCase() : 'DESC';
         
-        // Calculate offset
         const offset = (page - 1) * limit;
         
-        // Get total count
         const [countResult] = await pool.execute(
             `SELECT COUNT(*) as total FROM activity_logs ${whereClause}`,
             params
@@ -358,7 +339,6 @@ app.get('/api/activity-logs', authenticateToken, async (req, res) => {
         
         const total = countResult[0].total;
         
-        // Get logs with pagination
         const [logs] = await pool.execute(
             `SELECT * FROM activity_logs 
              ${whereClause}
@@ -387,7 +367,7 @@ app.get('/api/activity-logs', authenticateToken, async (req, res) => {
     }
 });
 
-// 5. GET MY ACTIVITY LOGS
+// 7. GET MY ACTIVITY LOGS
 app.get('/api/activity-logs/my', authenticateToken, async (req, res) => {
     try {
         const { limit = 20, page = 1 } = req.query;
@@ -415,13 +395,12 @@ app.get('/api/activity-logs/my', authenticateToken, async (req, res) => {
     }
 });
 
-// 6. GET ACTIVITY STATISTICS
+// 8. GET ACTIVITY STATISTICS
 app.get('/api/activity-logs/stats', authenticateToken, async (req, res) => {
     try {
         const { period = 'today', groupBy = 'action' } = req.query;
         
         let dateFilter = '';
-        let dateParams = [];
         
         switch (period) {
             case 'today':
@@ -461,7 +440,6 @@ app.get('/api/activity-logs/stats', authenticateToken, async (req, res) => {
                 selectColumns = 'action,';
         }
         
-        // Get statistics
         const [stats] = await pool.execute(
             `SELECT 
                 ${selectColumns}
@@ -469,20 +447,15 @@ app.get('/api/activity-logs/stats', authenticateToken, async (req, res) => {
              FROM activity_logs
              WHERE ${dateFilter}
              ${groupByClause}
-             ORDER BY count DESC`,
-            dateParams
+             ORDER BY count DESC`
         );
         
-        // Get total activities for the period
         const [totalResult] = await pool.execute(
-            `SELECT COUNT(*) as total FROM activity_logs WHERE ${dateFilter}`,
-            dateParams
+            `SELECT COUNT(*) as total FROM activity_logs WHERE ${dateFilter}`
         );
         
-        // Get unique users for the period
         const [usersResult] = await pool.execute(
-            `SELECT COUNT(DISTINCT username) as unique_users FROM activity_logs WHERE ${dateFilter}`,
-            dateParams
+            `SELECT COUNT(DISTINCT username) as unique_users FROM activity_logs WHERE ${dateFilter}`
         );
         
         res.json({
@@ -504,12 +477,11 @@ app.get('/api/activity-logs/stats', authenticateToken, async (req, res) => {
     }
 });
 
-// 7. LOGOUT WITH ACTIVITY LOG
+// 9. LOGOUT
 app.post('/api/logout', authenticateToken, async (req, res) => {
     try {
         const userAgent = req.headers['user-agent'] || 'Unknown';
         
-        // Log logout activity
         await pool.execute(
             `INSERT INTO activity_logs (id, action, username, user_name, user_agent, device_type, status)
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -538,9 +510,7 @@ app.post('/api/logout', authenticateToken, async (req, res) => {
     }
 });
 
-// ============ EXISTING ENDPOINTS (dari server.js asli) ============
-
-// 8. GET ALL DPK DATA
+// 10. GET ALL DPK DATA
 app.get('/api/dpk', authenticateToken, async (req, res) => {
     try {
         const [rows] = await pool.execute(
@@ -571,7 +541,7 @@ app.get('/api/dpk', authenticateToken, async (req, res) => {
     }
 });
 
-// 9. GET SPECIFIC PERIOD DPK DATA
+// 11. GET SPECIFIC PERIOD DPK DATA
 app.get('/api/dpk/:period', authenticateToken, async (req, res) => {
     try {
         const { period } = req.params;
@@ -603,7 +573,7 @@ app.get('/api/dpk/:period', authenticateToken, async (req, res) => {
     }
 });
 
-// 10. CREATE/UPDATE DPK DATA (DITAMBAHKAN TABUNGAN FIELDS)
+// 12. CREATE/UPDATE DPK DATA
 app.post('/api/dpk', authenticateToken, async (req, res) => {
     try {
         const {
@@ -625,8 +595,6 @@ app.post('/api/dpk', authenticateToken, async (req, res) => {
             tabungan_emas,
             notes
         } = req.body;
-        
-        console.log('📥 Received DPK data:', req.body);
         
         // Validasi required fields
         const requiredFields = ['period', 'dpk', 'tabungan', 'giro', 'deposito'];
@@ -678,14 +646,14 @@ app.post('/api/dpk', authenticateToken, async (req, res) => {
         const casaValue = casa ? parseFloat(casa) : (tabunganValue + giroValue);
         const casaPercentageValue = casa_percentage ? parseFloat(casa_percentage) : (dpkValue > 0 ? ((casaValue / dpkValue) * 100) : 0);
         
-        // Parse target values (nullable)
+        // Parse target values
         const targetDpkValue = target_dpk ? parseFloat(target_dpk) : null;
         const targetTabunganValue = target_tabungan ? parseFloat(target_tabungan) : null;
         const targetGiroValue = target_giro ? parseFloat(target_giro) : null;
         const targetDepositoValue = target_deposito ? parseFloat(target_deposito) : null;
         const targetCasaValue = target_casa ? parseFloat(target_casa) : null;
         
-        // Parse tabungan khusus fields (nullable)
+        // Parse tabungan khusus fields
         const tabunganHajiValue = tabungan_haji ? parseFloat(tabungan_haji) : null;
         const tabunganBisnisValue = tabungan_bisnis ? parseFloat(tabungan_bisnis) : null;
         const tabunganEmasValue = tabungan_emas ? parseFloat(tabungan_emas) : null;
@@ -695,10 +663,8 @@ app.post('/api/dpk', authenticateToken, async (req, res) => {
         if (date) {
             try {
                 if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                    // Format YYYY-MM-DD
                     formattedDate = date;
                 } else if (date.match(/^\d{2}-\w{3}-\d{4}$/)) {
-                    // Format DD-MMM-YYYY (contoh: 01-Jan-2026)
                     const parts = date.split('-');
                     const months = {
                         'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
@@ -711,7 +677,7 @@ app.post('/api/dpk', authenticateToken, async (req, res) => {
                     formattedDate = `${year}-${month}-${day}`;
                 }
             } catch (err) {
-                console.log(`⚠️ Error parsing date ${date}:`, err.message);
+                console.log(`Error parsing date ${date}:`, err.message);
             }
         }
         
@@ -728,21 +694,17 @@ app.post('/api/dpk', authenticateToken, async (req, res) => {
             deposito: depositoValue,
             casa: casaValue,
             casa_percentage: parseFloat(casaPercentageValue.toFixed(2)),
-            // Growth targets
             target_dpk: targetDpkValue,
             target_tabungan: targetTabunganValue,
             target_giro: targetGiroValue,
             target_deposito: targetDepositoValue,
             target_casa: targetCasaValue,
-            // Tabungan khusus
             tabungan_haji: tabunganHajiValue,
             tabungan_bisnis: tabunganBisnisValue,
             tabungan_emas: tabunganEmasValue,
             notes: notes || null,
             created_by: req.user.username || 'admin'
         };
-        
-        console.log('🔄 Processed DPK data:', dpkData);
         
         // Check if data already exists
         const [existing] = await pool.execute(
@@ -751,7 +713,6 @@ app.post('/api/dpk', authenticateToken, async (req, res) => {
         );
         
         let message;
-        let queryResult;
         
         if (existing.length > 0) {
             // Update existing data
@@ -805,77 +766,68 @@ app.post('/api/dpk', authenticateToken, async (req, res) => {
                 period
             ];
             
-            console.log('📝 Update query with', updateParams.length, 'params');
-            
-            [queryResult] = await pool.execute(updateQuery, updateParams);
+            await pool.execute(updateQuery, updateParams);
             message = 'Data updated successfully';
             
-            // Log activity - update_dpk
             await logDataActivity('update_dpk', req);
             
         } else {
             // INSERT NEW DATA
-const insertQuery = `
-    INSERT INTO dpk_data (
-        period, 
-        date,
-        branch_id, 
-        branch_name, 
-        area,
-        dpk, 
-        tabungan, 
-        giro, 
-        deposito, 
-        casa, 
-        casa_percentage,
-        target_dpk, 
-        target_tabungan, 
-        target_giro, 
-        target_deposito, 
-        target_casa, 
-        tabungan_haji,
-        tabungan_bisnis,
-        tabungan_emas,
-        notes, 
-        created_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`;
-
-const insertParams = [
-    dpkData.period,
-    dpkData.date,
-    dpkData.branch_id,
-    dpkData.branch_name,
-    dpkData.area,
-    dpkData.dpk,
-    dpkData.tabungan,
-    dpkData.giro,
-    dpkData.deposito,
-    dpkData.casa,
-    dpkData.casa_percentage,
-    dpkData.target_dpk,
-    dpkData.target_tabungan,
-    dpkData.target_giro,
-    dpkData.target_deposito,
-    dpkData.target_casa,
-    dpkData.tabungan_haji,
-    dpkData.tabungan_bisnis,
-    dpkData.tabungan_emas,
-    dpkData.notes,
-    dpkData.created_by
-];
-
-            console.log('➕ Insert query with', insertParams.length, 'params');
-            console.log('➕ Params:', insertParams);
+            const insertQuery = `
+                INSERT INTO dpk_data (
+                    period, 
+                    date,
+                    branch_id, 
+                    branch_name, 
+                    area,
+                    dpk, 
+                    tabungan, 
+                    giro, 
+                    deposito, 
+                    casa, 
+                    casa_percentage,
+                    target_dpk, 
+                    target_tabungan, 
+                    target_giro, 
+                    target_deposito, 
+                    target_casa, 
+                    tabungan_haji,
+                    tabungan_bisnis,
+                    tabungan_emas,
+                    notes, 
+                    created_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
             
-            [queryResult] = await pool.execute(insertQuery, insertParams);
+            const insertParams = [
+                dpkData.period,
+                dpkData.date,
+                dpkData.branch_id,
+                dpkData.branch_name,
+                dpkData.area,
+                dpkData.dpk,
+                dpkData.tabungan,
+                dpkData.giro,
+                dpkData.deposito,
+                dpkData.casa,
+                dpkData.casa_percentage,
+                dpkData.target_dpk,
+                dpkData.target_tabungan,
+                dpkData.target_giro,
+                dpkData.target_deposito,
+                dpkData.target_casa,
+                dpkData.tabungan_haji,
+                dpkData.tabungan_bisnis,
+                dpkData.tabungan_emas,
+                dpkData.notes,
+                dpkData.created_by
+            ];
+            
+            await pool.execute(insertQuery, insertParams);
             message = 'Data created successfully';
             
-            // Log activity - create_dpk
             await logDataActivity('create_dpk', req);
         }
-        
-        console.log('✅ Database result:', queryResult);
         
         res.json({
             success: true,
@@ -884,16 +836,7 @@ const insertParams = [
         });
         
     } catch (error) {
-        console.error('❌ Save DPK error:', error);
-        console.error('🔍 Error details:', {
-            message: error.message,
-            code: error.code,
-            errno: error.errno,
-            sqlState: error.sqlState,
-            sqlMessage: error.sqlMessage,
-            sql: error.sql
-        });
-        
+        console.error('Save DPK error:', error);
         res.status(500).json({ 
             success: false, 
             error: 'Failed to save DPK data',
@@ -903,7 +846,7 @@ const insertParams = [
     }
 });
 
-// 11. DELETE DPK DATA
+// 13. DELETE DPK DATA
 app.delete('/api/dpk/:period', authenticateToken, async (req, res) => {
     try {
         const { period } = req.params;
@@ -920,7 +863,6 @@ app.delete('/api/dpk/:period', authenticateToken, async (req, res) => {
             });
         }
         
-        // Log activity - delete_dpk
         await logDataActivity('delete_dpk', req);
         
         res.json({
@@ -937,7 +879,7 @@ app.delete('/api/dpk/:period', authenticateToken, async (req, res) => {
     }
 });
 
-// 12. GET DASHBOARD DATA (DITAMBAHKAN TABUNGAN DATA)
+// 14. GET DASHBOARD DATA
 app.get('/api/dashboard', authenticateToken, async (req, res) => {
     try {
         const [dpkData] = await pool.execute(
@@ -965,9 +907,7 @@ app.get('/api/dashboard', authenticateToken, async (req, res) => {
     }
 });
 
-// ============ PBY ENDPOINTS ============
-
-// 13. GET ALL PBY DATA
+// 15. GET ALL PBY DATA
 app.get('/api/pby', authenticateToken, async (req, res) => {
   try {
     const [rows] = await pool.execute(
@@ -1006,7 +946,7 @@ app.get('/api/pby', authenticateToken, async (req, res) => {
   }
 });
 
-// 14. GET SPECIFIC PERIOD PBY DATA
+// 16. GET SPECIFIC PERIOD PBY DATA
 app.get('/api/pby/:period', authenticateToken, async (req, res) => {
   try {
     const { period } = req.params;
@@ -1039,7 +979,7 @@ app.get('/api/pby/:period', authenticateToken, async (req, res) => {
   }
 });
 
-// 15. CREATE/UPDATE PBY DATA
+// 17. CREATE/UPDATE PBY DATA
 app.post('/api/pby', authenticateToken, async (req, res) => {
   try {
     const {
@@ -1074,10 +1014,6 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
       notes
     } = req.body;
     
-    console.log('📥 Received PBY data:');
-    console.log(JSON.stringify(req.body, null, 2));
-    
-    // Parse data
     const parseFloatOrNull = (val) => {
       if (val === undefined || val === null || val === '' || val === 'null') return null;
       const parsed = parseFloat(val);
@@ -1095,14 +1031,12 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
       return parsed;
     };
     
-    // Parse required fields
     const griyaValue = parseFloatRequired(griya, 'griya');
     const otoValue = parseFloatRequired(oto, 'oto');
     const mitragunaValue = parseFloatRequired(mitraguna, 'mitraguna');
     const pensiunValue = parseFloatRequired(pensiun, 'pensiun');
     const cicilEmasValue = parseFloatRequired(cicil_emas, 'cicil_emas');
     
-    // Parse optional fields
     const griyaCairValue = parseFloatOrNull(griya_cair) || 0;
     const griyaRunoffValue = parseFloatOrNull(griya_runoff) || 0;
     const otoCairValue = parseFloatOrNull(oto_cair) || 0;
@@ -1114,12 +1048,10 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
     const cicilEmasCairValue = parseFloatOrNull(cicil_emas_cair) || 0;
     const cicilEmasRunoffValue = parseFloatOrNull(cicil_emas_runoff) || 0;
     
-    // Parse CFG, PWG, PBY
     const cfgValue = parseFloatRequired(cfg !== undefined ? cfg : (griyaValue + otoValue + mitragunaValue + pensiunValue), 'cfg');
     const pwgValue = parseFloatRequired(pwg !== undefined ? pwg : cicilEmasValue, 'pwg');
     const pbyValue = parseFloatRequired(pby !== undefined ? pby : (cfgValue + pwgValue), 'pby');
     
-    // Calculate totals
     const cfgCairValue = griyaCairValue + otoCairValue + mitragunaCairValue + pensiunCairValue;
     const cfgRunoffValue = griyaRunoffValue + otoRunoffValue + mitragunaRunoffValue + pensiunRunoffValue;
     const pwgCairValue = cicilEmasCairValue;
@@ -1127,7 +1059,6 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
     const pbyCairValue = cfgCairValue + pwgCairValue;
     const pbyRunoffValue = cfgRunoffValue + pwgRunoffValue;
     
-    // Parse targets
     const targetGriyaValue = parseFloatOrNull(target_griya);
     const targetOtoValue = parseFloatOrNull(target_oto);
     const targetMitragunaValue = parseFloatOrNull(target_mitraguna);
@@ -1137,7 +1068,6 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
     const targetPWGValue = parseFloatOrNull(target_pwg);
     const targetPBYValue = parseFloatOrNull(target_pby);
     
-    // Format date
     let formattedDate = null;
     if (date && date !== 'null') {
       try {
@@ -1156,13 +1086,10 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
           formattedDate = `${year}-${month}-${day}`;
         }
       } catch (err) {
-        console.log(`⚠️ Error parsing date:`, err.message);
+        console.log(`Error parsing date:`, err.message);
       }
     }
     
-    console.log('✅ Data parsed successfully');
-    
-    // Check if data exists
     const [existing] = await pool.execute(
       'SELECT id FROM pby_data WHERE period = ? AND branch_id = ?',
       [period, BRANCH_INFO.id]
@@ -1171,7 +1098,6 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
     let message;
     
     if (existing.length > 0) {
-      // UPDATE EXISTING DATA
       const updateQuery = `
         UPDATE pby_data SET 
           date = ?,
@@ -1210,15 +1136,12 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
         period, BRANCH_INFO.id
       ];
       
-      console.log(`📝 UPDATE with ${updateParams.length} params`);
       await pool.execute(updateQuery, updateParams);
       message = 'Data PBY berhasil diupdate';
       
-      // Log activity - update_pby
       await logDataActivity('update_pby', req);
       
     } else {
-      // INSERT NEW DATA
       const insertQuery = `
         INSERT INTO pby_data (
           period, date,
@@ -1258,33 +1181,16 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
         req.user.username || 'admin'
       ];
       
-      console.log(`➕ INSERT with ${insertParams.length} params`);
-      
-      const placeholders = (insertQuery.match(/\?/g) || []).length;
-      console.log(`🔢 Query has ${placeholders} placeholders`);
-      console.log(`🔢 We have ${insertParams.length} parameters`);
-      
-      if (placeholders !== insertParams.length) {
-        console.error('❌ ERROR: Placeholder count mismatch!');
-        console.error(`   Placeholders in query: ${placeholders}`);
-        console.error(`   Parameters provided: ${insertParams.length}`);
-        throw new Error(`SQL Error: Placeholder mismatch (${placeholders} vs ${insertParams.length})`);
-      }
-      
       await pool.execute(insertQuery, insertParams);
       message = 'Data PBY berhasil disimpan';
       
-      // Log activity - create_pby
       await logDataActivity('create_pby', req);
     }
     
-    // Get saved data
     const [savedData] = await pool.execute(
       'SELECT * FROM pby_data WHERE period = ? AND branch_id = ?',
       [period, BRANCH_INFO.id]
     );
-    
-    console.log('✅ PBY data saved successfully!');
     
     res.json({
       success: true,
@@ -1293,8 +1199,7 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Save PBY error:', error.message);
-    console.error('🔍 Error details:', error);
+    console.error('Save PBY error:', error.message);
     
     let errorMessage = 'Gagal menyimpan data PBY';
     let statusCode = 500;
@@ -1317,7 +1222,7 @@ app.post('/api/pby', authenticateToken, async (req, res) => {
   }
 });
 
-// 16. DELETE PBY DATA
+// 18. DELETE PBY DATA
 app.delete('/api/pby/:period', authenticateToken, async (req, res) => {
   try {
     const { period } = req.params;
@@ -1334,7 +1239,6 @@ app.delete('/api/pby/:period', authenticateToken, async (req, res) => {
       });
     }
     
-    // Log activity - delete_pby
     await logDataActivity('delete_pby', req);
     
     res.json({
@@ -1351,7 +1255,7 @@ app.delete('/api/pby/:period', authenticateToken, async (req, res) => {
   }
 });
 
-// 17. GET PROFILE
+// 19. GET PROFILE
 app.get('/api/profile', authenticateToken, async (req, res) => {
   try {
     const [users] = await pool.execute(
@@ -1385,9 +1289,7 @@ app.get('/api/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// ============ USER PROFILE ENDPOINTS ============
-
-// 18. UPDATE USER PROFILE
+// 20. UPDATE USER PROFILE
 app.patch('/api/users/profile', authenticateToken, async (req, res) => {
   try {
     const { full_name, username } = req.body;
@@ -1399,7 +1301,6 @@ app.patch('/api/users/profile', authenticateToken, async (req, res) => {
       });
     }
     
-    // Cek jika username sudah digunakan oleh user lain
     const [existingUsers] = await pool.execute(
       'SELECT id FROM users WHERE username = ? AND id != ?',
       [username, req.user.id]
@@ -1412,7 +1313,6 @@ app.patch('/api/users/profile', authenticateToken, async (req, res) => {
       });
     }
     
-    // Update user profile
     await pool.execute(
       `UPDATE users SET 
         full_name = ?, 
@@ -1422,7 +1322,6 @@ app.patch('/api/users/profile', authenticateToken, async (req, res) => {
       [full_name, username, req.user.id]
     );
     
-    // Get updated user data
     const [users] = await pool.execute(
       `SELECT 
         id, 
@@ -1467,7 +1366,7 @@ app.patch('/api/users/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// 19. CHANGE PASSWORD
+// 21. CHANGE PASSWORD
 app.patch('/api/users/password', authenticateToken, async (req, res) => {
   try {
     const { current_password, new_password } = req.body;
@@ -1486,7 +1385,6 @@ app.patch('/api/users/password', authenticateToken, async (req, res) => {
       });
     }
     
-    // Get user with password
     const [users] = await pool.execute(
       'SELECT id, password FROM users WHERE id = ?',
       [req.user.id]
@@ -1501,7 +1399,6 @@ app.patch('/api/users/password', authenticateToken, async (req, res) => {
     
     const user = users[0];
     
-    // Verify current password
     const validPassword = await bcrypt.compare(current_password, user.password);
     if (!validPassword) {
       return res.status(401).json({
@@ -1510,17 +1407,14 @@ app.patch('/api/users/password', authenticateToken, async (req, res) => {
       });
     }
     
-    // Hash new password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(new_password, salt);
     
-    // Update password
     await pool.execute(
       'UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?',
       [hashedPassword, req.user.id]
     );
     
-    // Log activity - change_password
     const userAgent = req.headers['user-agent'] || 'Unknown';
     await pool.execute(
       `INSERT INTO activity_logs (id, action, username, user_name, user_agent, device_type, status)
@@ -1550,7 +1444,7 @@ app.patch('/api/users/password', authenticateToken, async (req, res) => {
   }
 });
 
-// 20. GET USER DETAILS
+// 22. GET USER DETAILS
 app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
     const [users] = await pool.execute(
@@ -1596,9 +1490,7 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
   }
 });
 
-// ============ BRANCH INFO ENDPOINTS ============
-
-// 21. GET MY BRANCH INFO
+// 23. GET MY BRANCH INFO
 app.get('/api/my-branch', authenticateToken, (req, res) => {
   res.json({
     success: true,
@@ -1606,7 +1498,7 @@ app.get('/api/my-branch', authenticateToken, (req, res) => {
   });
 });
 
-// 22. GET BRANCH DATA
+// 24. GET BRANCH DATA
 app.get('/api/branch-data', authenticateToken, async (req, res) => {
   try {
     const [dpkData] = await pool.execute(
@@ -1635,9 +1527,7 @@ app.get('/api/branch-data', authenticateToken, async (req, res) => {
   }
 });
 
-// ============ KOL2 ENDPOINTS ============
-
-// 23. GET ALL KOL2 DATA
+// 25. GET ALL KOL2 DATA
 app.get('/api/kol2', authenticateToken, async (req, res) => {
   try {
     const [rows] = await pool.execute(
@@ -1674,7 +1564,7 @@ app.get('/api/kol2', authenticateToken, async (req, res) => {
   }
 });
 
-// 24. GET SPECIFIC PERIOD KOL2 DATA
+// 26. GET SPECIFIC PERIOD KOL2 DATA
 app.get('/api/kol2/:period', authenticateToken, async (req, res) => {
   try {
     const { period } = req.params;
@@ -1706,7 +1596,7 @@ app.get('/api/kol2/:period', authenticateToken, async (req, res) => {
   }
 });
 
-// 25. CREATE/UPDATE KOL2 DATA
+// 27. CREATE/UPDATE KOL2 DATA
 app.post('/api/kol2', authenticateToken, async (req, res) => {
   try {
     const {
@@ -1723,10 +1613,6 @@ app.post('/api/kol2', authenticateToken, async (req, res) => {
       notes
     } = req.body;
     
-    console.log('📥 Received KOL2 data:');
-    console.log(JSON.stringify(req.body, null, 2));
-    
-    // Parse data
     const parseFloatOrZero = (val) => {
       if (val === undefined || val === null || val === '' || val === 'null') return 0;
       const parsed = parseFloat(val);
@@ -1739,12 +1625,10 @@ app.post('/api/kol2', authenticateToken, async (req, res) => {
     const pensiunValue = parseFloatOrZero(pensiun);
     const cicilEmasValue = parseFloatOrZero(cicil_emas);
     
-    // Auto-calculate jika tidak dikirim
     const cfgValue = parseFloatOrZero(cfg !== undefined ? cfg : (griyaValue + otoValue + mitragunaValue + pensiunValue));
     const pwgValue = parseFloatOrZero(pwg !== undefined ? pwg : cicilEmasValue);
     const kol2Value = parseFloatOrZero(kol2 !== undefined ? kol2 : (cfgValue + pwgValue));
     
-    // Format date
     let formattedDate = null;
     if (date && date !== 'null') {
       try {
@@ -1763,23 +1647,10 @@ app.post('/api/kol2', authenticateToken, async (req, res) => {
           formattedDate = `${year}-${month}-${day}`;
         }
       } catch (err) {
-        console.log(`⚠️ Error parsing date:`, err.message);
+        console.log(`Error parsing date:`, err.message);
       }
     }
     
-    console.log('✅ KOL2 Data parsed successfully');
-    console.log('📊 Values:', {
-      griya: griyaValue,
-      oto: otoValue,
-      mitraguna: mitragunaValue,
-      pensiun: pensiunValue,
-      cicil_emas: cicilEmasValue,
-      cfg: cfgValue,
-      pwg: pwgValue,
-      kol2: kol2Value
-    });
-    
-    // Check if data already exists
     const [existing] = await pool.execute(
       'SELECT id FROM kol2_data WHERE period = ?',
       [period]
@@ -1789,7 +1660,6 @@ app.post('/api/kol2', authenticateToken, async (req, res) => {
     let query;
     
     if (existing.length > 0) {
-      // UPDATE EXISTING DATA
       query = `
         UPDATE kol2_data SET 
           date = ?,
@@ -1822,15 +1692,12 @@ app.post('/api/kol2', authenticateToken, async (req, res) => {
         period
       ];
       
-      console.log(`📝 UPDATE KOL2 query`);
       await pool.execute(query, params);
       message = 'Data KOL2 berhasil diupdate';
       
-      // Log activity - update_kol2
       await logDataActivity('update_kol2', req);
       
     } else {
-      // INSERT NEW DATA
       query = `
         INSERT INTO kol2_data (
           period, 
@@ -1869,23 +1736,16 @@ app.post('/api/kol2', authenticateToken, async (req, res) => {
         req.user.username || 'admin'
       ];
       
-      console.log(`➕ INSERT KOL2 query with ${params.length} params`);
-      console.log('➕ Params:', params);
-      
       await pool.execute(query, params);
       message = 'Data KOL2 berhasil disimpan';
       
-      // Log activity - create_kol2
       await logDataActivity('create_kol2', req);
     }
     
-    // Get saved data
     const [savedData] = await pool.execute(
       'SELECT * FROM kol2_data WHERE period = ?',
       [period]
     );
-    
-    console.log('✅ KOL2 data saved successfully!');
     
     res.json({
       success: true,
@@ -1894,15 +1754,7 @@ app.post('/api/kol2', authenticateToken, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Save KOL2 error:', error.message);
-    console.error('🔍 Error details:', {
-      message: error.message,
-      code: error.code,
-      errno: error.errno,
-      sqlState: error.sqlState,
-      sqlMessage: error.sqlMessage,
-      sql: error.sql
-    });
+    console.error('Save KOL2 error:', error.message);
     
     let errorMessage = 'Gagal menyimpan data KOL2';
     let statusCode = 500;
@@ -1922,7 +1774,7 @@ app.post('/api/kol2', authenticateToken, async (req, res) => {
   }
 });
 
-// 26. DELETE KOL2 DATA
+// 28. DELETE KOL2 DATA
 app.delete('/api/kol2/:period', authenticateToken, async (req, res) => {
   try {
     const { period } = req.params;
@@ -1939,7 +1791,6 @@ app.delete('/api/kol2/:period', authenticateToken, async (req, res) => {
       });
     }
     
-    // Log activity - delete_kol2
     await logDataActivity('delete_kol2', req);
     
     res.json({
@@ -1956,9 +1807,7 @@ app.delete('/api/kol2/:period', authenticateToken, async (req, res) => {
   }
 });
 
-// ============ NPF ENDPOINTS ============
-
-// 27. GET ALL NPF DATA
+// 29. GET ALL NPF DATA
 app.get('/api/npf', authenticateToken, async (req, res) => {
   try {
     const [rows] = await pool.execute(
@@ -1995,7 +1844,7 @@ app.get('/api/npf', authenticateToken, async (req, res) => {
   }
 });
 
-// 28. GET SPECIFIC PERIOD NPF DATA
+// 30. GET SPECIFIC PERIOD NPF DATA
 app.get('/api/npf/:period', authenticateToken, async (req, res) => {
   try {
     const { period } = req.params;
@@ -2027,7 +1876,7 @@ app.get('/api/npf/:period', authenticateToken, async (req, res) => {
   }
 });
 
-// 29. CREATE/UPDATE NPF DATA
+// 31. CREATE/UPDATE NPF DATA
 app.post('/api/npf', authenticateToken, async (req, res) => {
   try {
     const {
@@ -2044,10 +1893,6 @@ app.post('/api/npf', authenticateToken, async (req, res) => {
       notes
     } = req.body;
     
-    console.log('📥 Received NPF data:');
-    console.log(JSON.stringify(req.body, null, 2));
-    
-    // Parse data
     const parseFloatOrZero = (val) => {
       if (val === undefined || val === null || val === '' || val === 'null') return 0;
       const parsed = parseFloat(val);
@@ -2060,12 +1905,10 @@ app.post('/api/npf', authenticateToken, async (req, res) => {
     const pensiunValue = parseFloatOrZero(pensiun);
     const cicilEmasValue = parseFloatOrZero(cicil_emas);
     
-    // Auto-calculate jika tidak dikirim
     const cfgValue = parseFloatOrZero(cfg !== undefined ? cfg : (griyaValue + otoValue + mitragunaValue + pensiunValue));
     const pwgValue = parseFloatOrZero(pwg !== undefined ? pwg : cicilEmasValue);
     const npfValue = parseFloatOrZero(npf !== undefined ? npf : (cfgValue + pwgValue));
     
-    // Format date
     let formattedDate = null;
     if (date && date !== 'null') {
       try {
@@ -2084,23 +1927,10 @@ app.post('/api/npf', authenticateToken, async (req, res) => {
           formattedDate = `${year}-${month}-${day}`;
         }
       } catch (err) {
-        console.log(`⚠️ Error parsing date:`, err.message);
+        console.log(`Error parsing date:`, err.message);
       }
     }
     
-    console.log('✅ NPF Data parsed successfully');
-    console.log('📊 Values:', {
-      griya: griyaValue,
-      oto: otoValue,
-      mitraguna: mitragunaValue,
-      pensiun: pensiunValue,
-      cicil_emas: cicilEmasValue,
-      cfg: cfgValue,
-      pwg: pwgValue,
-      npf: npfValue
-    });
-    
-    // Check if data already exists
     const [existing] = await pool.execute(
       'SELECT id FROM npf_data WHERE period = ?',
       [period]
@@ -2110,7 +1940,6 @@ app.post('/api/npf', authenticateToken, async (req, res) => {
     let query;
     
     if (existing.length > 0) {
-      // UPDATE EXISTING DATA
       query = `
         UPDATE npf_data SET 
           date = ?,
@@ -2143,15 +1972,12 @@ app.post('/api/npf', authenticateToken, async (req, res) => {
         period
       ];
       
-      console.log(`📝 UPDATE NPF query`);
       await pool.execute(query, params);
       message = 'Data NPF berhasil diupdate';
       
-      // Log activity - update_npf
       await logDataActivity('update_npf', req);
       
     } else {
-      // INSERT NEW DATA
       query = `
         INSERT INTO npf_data (
           period, 
@@ -2190,23 +2016,16 @@ app.post('/api/npf', authenticateToken, async (req, res) => {
         req.user.username || 'admin'
       ];
       
-      console.log(`➕ INSERT NPF query with ${params.length} params`);
-      console.log('➕ Params:', params);
-      
       await pool.execute(query, params);
       message = 'Data NPF berhasil disimpan';
       
-      // Log activity - create_npf
       await logDataActivity('create_npf', req);
     }
     
-    // Get saved data
     const [savedData] = await pool.execute(
       'SELECT * FROM npf_data WHERE period = ?',
       [period]
     );
-    
-    console.log('✅ NPF data saved successfully!');
     
     res.json({
       success: true,
@@ -2215,15 +2034,7 @@ app.post('/api/npf', authenticateToken, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Save NPF error:', error.message);
-    console.error('🔍 Error details:', {
-      message: error.message,
-      code: error.code,
-      errno: error.errno,
-      sqlState: error.sqlState,
-      sqlMessage: error.sqlMessage,
-      sql: error.sql
-    });
+    console.error('Save NPF error:', error.message);
     
     let errorMessage = 'Gagal menyimpan data NPF';
     let statusCode = 500;
@@ -2243,7 +2054,7 @@ app.post('/api/npf', authenticateToken, async (req, res) => {
   }
 });
 
-// 30. DELETE NPF DATA
+// 32. DELETE NPF DATA
 app.delete('/api/npf/:period', authenticateToken, async (req, res) => {
   try {
     const { period } = req.params;
@@ -2260,7 +2071,6 @@ app.delete('/api/npf/:period', authenticateToken, async (req, res) => {
       });
     }
     
-    // Log activity - delete_npf
     await logDataActivity('delete_npf', req);
     
     res.json({
@@ -2277,9 +2087,7 @@ app.delete('/api/npf/:period', authenticateToken, async (req, res) => {
   }
 });
 
-// ============ TABUNGAN ENDPOINTS (BARU) ============
-
-// 31. GET ALL TABUNGAN DATA
+// 33. GET ALL TABUNGAN DATA
 app.get('/api/tabungan', authenticateToken, async (req, res) => {
     try {
         const [rows] = await pool.execute(
@@ -2318,7 +2126,7 @@ app.get('/api/tabungan', authenticateToken, async (req, res) => {
     }
 });
 
-// 32. GET SPECIFIC PERIOD TABUNGAN DATA
+// 34. GET SPECIFIC PERIOD TABUNGAN DATA
 app.get('/api/tabungan/:period', authenticateToken, async (req, res) => {
     try {
         const { period } = req.params;
@@ -2351,7 +2159,7 @@ app.get('/api/tabungan/:period', authenticateToken, async (req, res) => {
     }
 });
 
-// 33. CREATE/UPDATE TABUNGAN DATA
+// 35. CREATE/UPDATE TABUNGAN DATA
 app.post('/api/tabungan', authenticateToken, async (req, res) => {
     try {
         const {
@@ -2362,9 +2170,6 @@ app.post('/api/tabungan', authenticateToken, async (req, res) => {
             tabungan_emas,
             notes
         } = req.body;
-        
-        console.log('📥 Received Tabungan data:');
-        console.log(JSON.stringify(req.body, null, 2));
         
         // Validasi required fields
         const requiredFields = ['period', 'tabungan_haji', 'tabungan_bisnis', 'tabungan_emas'];
@@ -2377,7 +2182,6 @@ app.post('/api/tabungan', authenticateToken, async (req, res) => {
             }
         }
         
-        // Parse nilai numerik
         const parseFloatOrZero = (val, fieldName) => {
             if (val === undefined || val === null || val === '' || val === 'null') {
                 return 0;
@@ -2393,7 +2197,6 @@ app.post('/api/tabungan', authenticateToken, async (req, res) => {
         const tabunganBisnisValue = parseFloatOrZero(tabungan_bisnis, 'Tabungan Bisnis');
         const tabunganEmasValue = parseFloatOrZero(tabungan_emas, 'Tabungan Emas');
         
-        // Format date
         let formattedDate = null;
         if (date && date !== 'null') {
             try {
@@ -2412,11 +2215,10 @@ app.post('/api/tabungan', authenticateToken, async (req, res) => {
                     formattedDate = `${year}-${month}-${day}`;
                 }
             } catch (err) {
-                console.log(`⚠️ Error parsing date:`, err.message);
+                console.log(`Error parsing date:`, err.message);
             }
         }
         
-        // Data untuk database
         const tabunganData = {
             period: period,
             date: formattedDate,
@@ -2430,9 +2232,6 @@ app.post('/api/tabungan', authenticateToken, async (req, res) => {
             created_by: req.user.username || 'admin'
         };
         
-        console.log('🔄 Processed Tabungan data:', tabunganData);
-        
-        // Check if data already exists
         const [existing] = await pool.execute(
             'SELECT id FROM tabungan_data WHERE period = ? AND branch_id = ?',
             [period, BRANCH_INFO.id]
@@ -2441,7 +2240,6 @@ app.post('/api/tabungan', authenticateToken, async (req, res) => {
         let message;
         
         if (existing.length > 0) {
-            // Update existing data
             const updateQuery = `
                 UPDATE tabungan_data SET 
                     date = ?,
@@ -2465,16 +2263,12 @@ app.post('/api/tabungan', authenticateToken, async (req, res) => {
                 BRANCH_INFO.id
             ];
             
-            console.log('📝 Update Tabungan query with', updateParams.length, 'params');
-            
             await pool.execute(updateQuery, updateParams);
             message = 'Data Tabungan berhasil diupdate';
             
-            // Log activity - update_tabungan
             await logDataActivity('update_tabungan', req);
             
         } else {
-            // Insert new data
             const insertQuery = `
                 INSERT INTO tabungan_data (
                     period, 
@@ -2503,19 +2297,12 @@ app.post('/api/tabungan', authenticateToken, async (req, res) => {
                 tabunganData.created_by
             ];
             
-            console.log('➕ Insert Tabungan query with', insertParams.length, 'params');
-            console.log('➕ Params:', insertParams);
-            
             await pool.execute(insertQuery, insertParams);
             message = 'Data Tabungan berhasil disimpan';
             
-            // Log activity - create_tabungan
             await logDataActivity('create_tabungan', req);
         }
         
-        console.log('✅ Database operation completed');
-        
-        // Get saved data
         const [savedData] = await pool.execute(
             'SELECT * FROM tabungan_data WHERE period = ? AND branch_id = ?',
             [period, BRANCH_INFO.id]
@@ -2528,15 +2315,7 @@ app.post('/api/tabungan', authenticateToken, async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Save Tabungan error:', error);
-        console.error('🔍 Error details:', {
-            message: error.message,
-            code: error.code,
-            errno: error.errno,
-            sqlState: error.sqlState,
-            sqlMessage: error.sqlMessage,
-            sql: error.sql
-        });
+        console.error('Save Tabungan error:', error);
         
         let errorMessage = 'Gagal menyimpan data Tabungan';
         let statusCode = 500;
@@ -2560,7 +2339,7 @@ app.post('/api/tabungan', authenticateToken, async (req, res) => {
     }
 });
 
-// 34. DELETE TABUNGAN DATA
+// 36. DELETE TABUNGAN DATA
 app.delete('/api/tabungan/:period', authenticateToken, async (req, res) => {
     try {
         const { period } = req.params;
@@ -2577,7 +2356,6 @@ app.delete('/api/tabungan/:period', authenticateToken, async (req, res) => {
             });
         }
         
-        // Log activity - delete_tabungan
         await logDataActivity('delete_tabungan', req);
         
         res.json({
@@ -2596,12 +2374,11 @@ app.delete('/api/tabungan/:period', authenticateToken, async (req, res) => {
 
 // ============ HELPER FUNCTIONS ============
 
-// Helper function untuk log activity ketika ada perubahan data
+// Helper function untuk log activity
 async function logDataActivity(action, req) {
     try {
         const userAgent = req.headers['user-agent'] || 'Unknown';
         
-        // Map action ke deskripsi yang lebih jelas
         const actionDescriptions = {
             'create_dpk': 'Create DPK Data',
             'update_dpk': 'Update DPK Data',
@@ -2639,38 +2416,15 @@ async function logDataActivity(action, req) {
         );
     } catch (error) {
         console.error('Error logging data activity:', error);
-        // Jangan throw error, karena ini hanya logging
     }
 }
 
-// ============ ERROR HANDLING ============
+// ============ VERCEL COMPATIBILITY ============
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error('Unhandled error:', err);
-    res.status(500).json({ 
-        success: false, 
-        error: 'Internal server error' 
-    });
-});
-
-// 404 handler
-app.use((req, res) => {
-    res.status(404).json({ 
-        success: false, 
-        error: 'Endpoint not found',
-        path: req.originalUrl 
-    });
-});
-
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
-});
-// ============ EXPORT FOR VERCEL ============
-// Vercel akan menggunakan export ini
+// Ekspor app untuk Vercel
 module.exports = app;
 
-// Hanya start server jika tidak di environment Vercel
+// Jika tidak di Vercel, start server sendiri
 if (require.main === module) {
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, '0.0.0.0', () => {
@@ -2679,7 +2433,5 @@ if (require.main === module) {
         console.log(`📍 Area: ${BRANCH_INFO.area}`);
         console.log(`🔐 Single Admin Mode`);
         console.log(`📊 Activity Logging: ENABLED`);
-        console.log("APP PORT =", process.env.PORT);
-        console.log("DB PORT =", process.env.DB_PORT);
     });
 }
