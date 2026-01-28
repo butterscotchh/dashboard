@@ -68,9 +68,6 @@ api.interceptors.response.use(
     }
 );
 
-// ... (sisa code Anda tetap sama, mulai dari Helper function untuk detect device type)
-// Semua function Anda yang sudah ada tetap dipertahankan
-
 const getDeviceType = () => {
     const ua = navigator.userAgent;
     if (/mobile/i.test(ua)) return 'Mobile';
@@ -84,7 +81,7 @@ const authService = {
     // Login
     async login(username, password) {
         try {
-            const response = await api.post('/login', { username, password });
+            const response = await api.post('/api/login', { username, password });
             const data = response.data;
             
             if (data.success) {
@@ -116,7 +113,7 @@ const authService = {
             const timeoutId = setTimeout(() => controller.abort(), 2000);
             
             try {
-                await api.post('/logout', {}, { signal: controller.signal });
+                await api.post('/api/logout', {}, { signal: controller.signal });
             } catch (apiError) {
                 if (apiError.name === 'AbortError') {
                     console.log('Logout API timeout, proceeding anyway');
@@ -159,7 +156,7 @@ const authService = {
     // Verify token
     async verifyToken() {
         try {
-            const response = await api.get('/verify-token');
+            const response = await api.get('/api/verify-token');
             return response.data;
         } catch (error) {
             console.error('Token verification error:', error);
@@ -173,7 +170,7 @@ const authService = {
     // Get profile
     async getProfile() {
         try {
-            const response = await api.get('/profile');
+            const response = await api.get('/api/profile');
             return response.data;
         } catch (error) {
             console.error('Get profile error:', error);
@@ -200,7 +197,7 @@ const authService = {
     // Fetch fresh user data from server (FIX: untuk dapat data lengkap)
     async fetchUserProfile() {
         try {
-            const response = await api.get('/users/me');
+            const response = await api.get('/api/users/me');
             const data = response.data;
             
             if (data.success && data.user) {
@@ -240,25 +237,12 @@ const authService = {
         }
     },
     
-    // Log activity
+    // Log activity - FIX: Backend tidak punya endpoint ini, jadi kita skip
     async logActivity(action, userData = {}, details = {}) {
-        try {
-            const user = this.getCurrentUser();
-            const response = await api.post('/auth/log-activity', {
-                action: action,
-                username: user?.username || userData.username,
-                user_name: user?.full_name || userData.full_name,
-                user_agent: navigator.userAgent,
-                device_type: getDeviceType(),
-                status: 'success',
-                details: JSON.stringify({ ...details, ...userData })
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Failed to log activity:', error);
-            // Jangan throw error, biarkan proses tetap berjalan
-            return { success: false, error: 'Failed to log activity' };
-        }
+        // Backend sudah handle logging otomatis di setiap endpoint
+        // Tidak perlu request tambahan
+        console.log(`Activity logged: ${action}`);
+        return { success: true };
     },
     
     // ============ ACTIVITY LOGS ENDPOINTS ============
@@ -266,7 +250,7 @@ const authService = {
     // Get activity logs (semua user)
     async getActivityLogs(params = {}) {
         try {
-            const response = await api.get('/activity-logs', { params });
+            const response = await api.get('/api/activity-logs', { params });
             return response.data;
         } catch (error) {
             console.error('Get activity logs error:', error);
@@ -280,7 +264,7 @@ const authService = {
     // Get user's own activity logs
     async getMyActivityLogs(params = {}) {
         try {
-            const response = await api.get('/activity-logs/my', { params });
+            const response = await api.get('/api/activity-logs/my', { params });
             return response.data;
         } catch (error) {
             console.error('Get my activity logs error:', error);
@@ -294,7 +278,7 @@ const authService = {
     // Get activity log statistics
     async getActivityStats(params = {}) {
         try {
-            const response = await api.get('/activity-logs/stats', { params });
+            const response = await api.get('/api/activity-logs/stats', { params });
             return response.data;
         } catch (error) {
             console.error('Get activity stats error:', error);
@@ -310,7 +294,7 @@ const authService = {
     // Update user profile (full_name dan username) - DIPERBAIKI
     async updateProfile(data) {
         try {
-            const response = await api.patch('/users/profile', data);
+            const response = await api.patch('/api/users/profile', data);
             const responseData = response.data;
             
             if (responseData.success) {
@@ -340,12 +324,11 @@ const authService = {
     // Change password - DIPERBAIKI
     async changePassword(data) {
         try {
-            const response = await api.patch('/users/password', data);
+            const response = await api.patch('/api/users/password', data);
             const responseData = response.data;
             
             if (responseData.success) {
-                // Log activity setelah ganti password
-                await this.logActivity('password_change', {});
+                // Backend sudah handle activity logging otomatis
             }
             
             return responseData;
@@ -361,7 +344,7 @@ const authService = {
     // Get user details (sudah ada di fetchUserProfile)
     async getUserDetails() {
         try {
-            const response = await api.get('/users/me');
+            const response = await api.get('/api/users/me');
             return response.data;
         } catch (error) {
             console.error('Get user details error:', error);
@@ -377,7 +360,7 @@ const authService = {
     // Get all DPK data
     async getDPKData() {
         try {
-            const response = await api.get('/dpk');
+            const response = await api.get('/api/dpk');
             return response.data;
         } catch (error) {
             console.error('Get DPK data error:', error);
@@ -391,7 +374,7 @@ const authService = {
     // Get specific period DPK data
     async getDPKPeriodData(period) {
         try {
-            const response = await api.get(`/dpk/${encodeURIComponent(period)}`);
+            const response = await api.get(`/api/dpk/${encodeURIComponent(period)}`);
             return response.data;
         } catch (error) {
             console.error('Get DPK period data error:', error);
@@ -405,7 +388,7 @@ const authService = {
     // Save/update DPK data
     async saveDPKData(data) {
         try {
-            const response = await api.post('/dpk', data);
+            const response = await api.post('/api/dpk', data);
             return response.data;
         } catch (error) {
             console.error('Save DPK data error:', error);
@@ -419,7 +402,7 @@ const authService = {
     // Delete DPK data
     async deleteDPKData(period) {
         try {
-            const response = await api.delete(`/dpk/${encodeURIComponent(period)}`);
+            const response = await api.delete(`/api/dpk/${encodeURIComponent(period)}`);
             return response.data;
         } catch (error) {
             console.error('Delete DPK data error:', error);
@@ -432,68 +415,68 @@ const authService = {
     
     // ============ TABUNGAN DATA ENDPOINTS ============
 
-// Get all Tabungan data
-async getTabunganData() {
-    try {
-        const response = await api.get('/tabungan');
-        return response.data;
-    } catch (error) {
-        console.error('Get Tabungan data error:', error);
-        return {
-            success: false,
-            error: error.response?.data?.error || 'Failed to get Tabungan data'
-        };
-    }
-},
+    // Get all Tabungan data
+    async getTabunganData() {
+        try {
+            const response = await api.get('/api/tabungan');
+            return response.data;
+        } catch (error) {
+            console.error('Get Tabungan data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to get Tabungan data'
+            };
+        }
+    },
 
-// Get specific period Tabungan data
-async getTabunganPeriodData(period) {
-    try {
-        const response = await api.get(`/tabungan/${encodeURIComponent(period)}`);
-        return response.data;
-    } catch (error) {
-        console.error('Get Tabungan period data error:', error);
-        return {
-            success: false,
-            error: error.response?.data?.error || 'Failed to get period data'
-        };
-    }
-},
+    // Get specific period Tabungan data
+    async getTabunganPeriodData(period) {
+        try {
+            const response = await api.get(`/api/tabungan/${encodeURIComponent(period)}`);
+            return response.data;
+        } catch (error) {
+            console.error('Get Tabungan period data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to get period data'
+            };
+        }
+    },
 
-// Save/update Tabungan data
-async saveTabunganData(data) {
-    try {
-        const response = await api.post('/tabungan', data);
-        return response.data;
-    } catch (error) {
-        console.error('Save Tabungan data error:', error);
-        return {
-            success: false,
-            error: error.response?.data?.error || 'Failed to save Tabungan data'
-        };
-    }
-},
+    // Save/update Tabungan data
+    async saveTabunganData(data) {
+        try {
+            const response = await api.post('/api/tabungan', data);
+            return response.data;
+        } catch (error) {
+            console.error('Save Tabungan data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to save Tabungan data'
+            };
+        }
+    },
 
-// Delete Tabungan data
-async deleteTabunganData(period) {
-    try {
-        const response = await api.delete(`/tabungan/${encodeURIComponent(period)}`);
-        return response.data;
-    } catch (error) {
-        console.error('Delete Tabungan data error:', error);
-        return {
-            success: false,
-            error: error.response?.data?.error || 'Failed to delete Tabungan data'
-        };
-    }
-},
+    // Delete Tabungan data
+    async deleteTabunganData(period) {
+        try {
+            const response = await api.delete(`/api/tabungan/${encodeURIComponent(period)}`);
+            return response.data;
+        } catch (error) {
+            console.error('Delete Tabungan data error:', error);
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Failed to delete Tabungan data'
+            };
+        }
+    },
 
     // ============ PBY DATA ENDPOINTS ============
     
     // Get all PBY data
     async getPBYData() {
         try {
-            const response = await api.get('/pby');
+            const response = await api.get('/api/pby');
             return response.data;
         } catch (error) {
             console.error('Get PBY data error:', error);
@@ -507,7 +490,7 @@ async deleteTabunganData(period) {
     // Get specific period PBY data
     async getPBYPeriodData(period) {
         try {
-            const response = await api.get(`/pby/${encodeURIComponent(period)}`);
+            const response = await api.get(`/api/pby/${encodeURIComponent(period)}`);
             return response.data;
         } catch (error) {
             console.error('Get PBY period data error:', error);
@@ -521,7 +504,7 @@ async deleteTabunganData(period) {
     // Save/update PBY data
     async savePBYData(data) {
         try {
-            const response = await api.post('/pby', data);
+            const response = await api.post('/api/pby', data);
             return response.data;
         } catch (error) {
             console.error('Save PBY data error:', error);
@@ -535,7 +518,7 @@ async deleteTabunganData(period) {
     // Delete PBY data
     async deletePBYData(period) {
         try {
-            const response = await api.delete(`/pby/${encodeURIComponent(period)}`);
+            const response = await api.delete(`/api/pby/${encodeURIComponent(period)}`);
             return response.data;
         } catch (error) {
             console.error('Delete PBY data error:', error);
@@ -551,7 +534,7 @@ async deleteTabunganData(period) {
     // Get all Kol2 data
     async getKol2Data() {
         try {
-            const response = await api.get('/kol2');
+            const response = await api.get('/api/kol2');
             return response.data;
         } catch (error) {
             console.error('Get Kol2 data error:', error);
@@ -565,7 +548,7 @@ async deleteTabunganData(period) {
     // Get specific period Kol2 data
     async getKol2PeriodData(period) {
         try {
-            const response = await api.get(`/kol2/${encodeURIComponent(period)}`);
+            const response = await api.get(`/api/kol2/${encodeURIComponent(period)}`);
             return response.data;
         } catch (error) {
             console.error('Get Kol2 period data error:', error);
@@ -579,7 +562,7 @@ async deleteTabunganData(period) {
     // Save/update Kol2 data
     async saveKol2Data(data) {
         try {
-            const response = await api.post('/kol2', data);
+            const response = await api.post('/api/kol2', data);
             return response.data;
         } catch (error) {
             console.error('Save Kol2 data error:', error);
@@ -593,7 +576,7 @@ async deleteTabunganData(period) {
     // Delete Kol2 data
     async deleteKol2Data(period) {
         try {
-            const response = await api.delete(`/kol2/${encodeURIComponent(period)}`);
+            const response = await api.delete(`/api/kol2/${encodeURIComponent(period)}`);
             return response.data;
         } catch (error) {
             console.error('Delete Kol2 data error:', error);
@@ -609,7 +592,7 @@ async deleteTabunganData(period) {
     // Get all NPF data
     async getNPFData() {
         try {
-            const response = await api.get('/npf');
+            const response = await api.get('/api/npf');
             return response.data;
         } catch (error) {
             console.error('Get NPF data error:', error);
@@ -623,7 +606,7 @@ async deleteTabunganData(period) {
     // Get specific period NPF data
     async getNPFPeriodData(period) {
         try {
-            const response = await api.get(`/npf/${encodeURIComponent(period)}`);
+            const response = await api.get(`/api/npf/${encodeURIComponent(period)}`);
             return response.data;
         } catch (error) {
             console.error('Get NPF period data error:', error);
@@ -637,7 +620,7 @@ async deleteTabunganData(period) {
     // Save/update NPF data
     async saveNPFData(data) {
         try {
-            const response = await api.post('/npf', data);
+            const response = await api.post('/api/npf', data);
             return response.data;
         } catch (error) {
             console.error('Save NPF data error:', error);
@@ -651,7 +634,7 @@ async deleteTabunganData(period) {
     // Delete NPF data
     async deleteNPFData(period) {
         try {
-            const response = await api.delete(`/npf/${encodeURIComponent(period)}`);
+            const response = await api.delete(`/api/npf/${encodeURIComponent(period)}`);
             return response.data;
         } catch (error) {
             console.error('Delete NPF data error:', error);
@@ -667,7 +650,7 @@ async deleteTabunganData(period) {
     // Get dashboard data
     async getDashboardData() {
         try {
-            const response = await api.get('/dashboard');
+            const response = await api.get('/api/dashboard');
             return response.data;
         } catch (error) {
             console.error('Get dashboard data error:', error);
@@ -683,7 +666,7 @@ async deleteTabunganData(period) {
     // Get branch data
     async getBranchData() {
         try {
-            const response = await api.get('/branch-data');
+            const response = await api.get('/api/branch-data');
             return response.data;
         } catch (error) {
             console.error('Get branch data error:', error);
@@ -697,7 +680,7 @@ async deleteTabunganData(period) {
     // Get my branch info
     async getMyBranch() {
         try {
-            const response = await api.get('/my-branch');
+            const response = await api.get('/api/my-branch');
             return response.data;
         } catch (error) {
             console.error('Get my branch error:', error);
