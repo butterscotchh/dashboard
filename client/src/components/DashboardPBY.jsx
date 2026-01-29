@@ -1095,7 +1095,7 @@ const getPerformanceCards = () => {
                     
                     <div className="px-6 py-3 bg-emerald-50 text-xs text-gray-600 border-t border-gray-200">
                         <div className="flex justify-between items-center">
-                            <span>Posisi = Data periode Terlama + Target periode {selectedPeriod}</span>
+                            <span>Data periode {selectedPeriod}</span>
                             <span className="text-emerald-700 font-medium">
                                 {selectedPeriod === '31-Dec' ? 'Target Akhir Tahun' : 'Target Periode'}
                             </span>
