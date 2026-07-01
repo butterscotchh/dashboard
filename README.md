@@ -1,6 +1,8 @@
-# Dashboard Monitoring Branch
+# Dashboard Monitoring Branch (DashMoB)
 
-A full-stack branch monitoring dashboard developed during my internship at **Bank Syariah Indonesia (BSI)**. This application helps monitor branch performance through financial metrics, provides data management features, activity logging, and secure authentication.
+A full-stack branch monitoring dashboard developed during my internship at **Bank Syariah Indonesia (BSI)**.
+
+DashMoB was built to digitize and simplify branch performance monitoring that was previously managed through spreadsheets and presentation reports. The system centralizes key financial and operational metrics into a responsive dashboard, enabling faster reporting, easier data management, activity tracking, and secure access from both desktop and mobile devices.
 
 > ⚠️ DISCLAIMER
 >
