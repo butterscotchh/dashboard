@@ -236,7 +236,7 @@ The application uses MySQL with several main tables:
 - kol2_data
 - npf_data
 
-The complete database schema has been omitted from this public repository for simplicity.
+The complete database schema has been comitted from this public repository for simplicity.
 
 ---
 
