@@ -31,6 +31,57 @@ This dashboard was created to simplify branch performance monitoring and reporti
 - Profile Management
 - Responsive Design
 
+# Demo Preview
+
+## 1. Login Authentication
+
+User authentication using JWT-based login system.
+
+![Login Demo](./demo/login.gif)
+
+---
+
+## 2. Dashboard Overview
+
+Overview of branch performance metrics and summary information.
+
+![Dashboard Overview](./demo/dashboard-overview.gif)
+
+---
+
+## 3. Navigation Between Monitoring Sections
+
+Switching between DPK, PBY, KOL2, NPF, and other monitoring modules.
+
+![Section Navigation](./demo/section-navigation.gif)
+
+---
+
+## 4. DPK Monitoring Dashboard
+
+Monitoring DPK performance, CASA, Giro, Deposito, and Tabungan metrics.
+
+![DPK Dashboard](./demo/dpk-dashboard.gif)
+
+---
+
+## 5. DPK Data Input & Management
+
+Creating and updating DPK data through the management interface.
+
+<p align="center">
+  <img src="./demo/dpk-input.gif" width="45%">
+  <img src="./demo/dpk-edit.gif" width="45%">
+</p>
+
+---
+
+## 6. Profile Management
+
+User profile management and password update functionality.
+
+![Profile Management](./demo/profile-management.gif)
+
 ---
 
 # Tech Stack
@@ -314,7 +365,7 @@ All data displayed in this project are simulated and provided for demonstration 
 
 **Abthal Akbar**
 
-Full Stack Developer Intern
+Full Stack Developer Intern / Junior Sales Marketing
 
 📧 Email: abthalakbar@gmail.com
 
