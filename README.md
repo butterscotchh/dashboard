@@ -1,7 +1,5 @@
 # Dashboard Monitoring Branch (DashMoB)
 
-A full-stack branch monitoring dashboard developed during my internship at **Bank Syariah Indonesia (BSI)**.
-
 DashMoB was built to digitize and simplify branch performance monitoring that was previously managed through spreadsheets and presentation reports. The system centralizes key financial and operational metrics into a responsive dashboard, enabling faster reporting, easier data management, activity tracking, and secure access from both desktop and mobile devices.
 
 > ⚠️ DISCLAIMER
@@ -295,8 +293,6 @@ The complete database schema has been comitted from this public repository for s
 
 # Project Status
 
-✅ Completed Internship Project
-
 Implemented features:
 
 - JWT Authentication
@@ -369,12 +365,12 @@ All data displayed in this project are simulated and provided for demonstration 
 
 Full Stack Developer Intern / Junior Sales Marketing
 
-📧 Email: abthalakbar@gmail.com
+Email: abthalakbar@gmail.com
 
-💼 LinkedIn:
+LinkedIn:
 https://linkedin.com/in/abthal-akbar-595a4828a
 
-🐙 GitHub:
+GitHub:
 https://github.com/butterscotchh
 
 ---
